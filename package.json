@@ -1,0 +1,23 @@
+{
+  "name": "modeling-tool-platform",
+  "version": "1.0.0",
+  "description": "Интерактивный инструмент для 3D-моделирования в веб-пространстве.",
+  "main": "index.js",
+  "scripts": {
+    "start": "cd server && npm start",
+    "dev": "cd server && npm run dev",
+    "install:server": "cd server && npm install"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TopCollegeTCF/Modeling-Tool-Platform.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/TopCollegeTCF/Modeling-Tool-Platform/issues"
+  },
+  "homepage": "https://github.com/TopCollegeTCF/Modeling-Tool-Platform#readme"
+}

@@ -1,0 +1,40 @@
+services:
+  - type: web
+    name: 3d-modeling-tool
+    env: node
+    buildCommand: cd server && npm install
+    startCommand: cd server && npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: DB_HOST
+        fromDatabase:
+          name: modeling-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: modeling-db
+          property: port
+      - key: DB_NAME
+        fromDatabase:
+          name: modeling-db
+          property: database
+      - key: DB_USER
+        fromDatabase:
+          name: modeling-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: modeling-db
+          property: password
+      - key: JWT_SECRET
+        generateValue: true
+      - key: PUBLIC_URL
+        value: https://your-app-name.onrender.com
+
+  - type: postgres
+    name: modeling-db
+    ipAllowList: []
+    plan: starter

@@ -1,12 +1,80 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>3D Modeler - Интерактивный инструмент</title>
+    <link rel="stylesheet" href="/public/css/style.css">
 </head>
 <body>
-    
+    <div id="app">
+        <!-- Панель навигации -->
+        <nav id="navbar">
+            <div class="nav-brand">3D Modeler</div>
+            <div id="auth-controls">
+                <div id="user-info"></div>
+                <button id="logout-btn" style="display:none;">Выйти</button>
+            </div>
+        </nav>
+
+        <!-- Авторизация -->
+        <div id="auth-container">
+            <div id="login-form">
+                <h2>Вход в систему</h2>
+                <input type="email" id="login-email" placeholder="Email" required>
+                <input type="password" id="login-password" placeholder="Пароль" required>
+                <button id="login-btn">Войти</button>
+                <p>Нет аккаунта? <a href="#" id="show-register">Зарегистрироваться</a></p>
+            </div>
+            <div id="register-form" style="display:none;">
+                <h2>Регистрация</h2>
+                <input type="text" id="register-username" placeholder="Имя пользователя" required>
+                <input type="email" id="register-email" placeholder="Email" required>
+                <input type="password" id="register-password" placeholder="Пароль" required>
+                <input type="password" id="register-password-confirm" placeholder="Подтвердите пароль" required>
+                <button id="register-btn">Зарегистрироваться</button>
+                <p>Уже есть аккаунт? <a href="#" id="show-login">Войти</a></p>
+            </div>
+        </div>
+
+        <!-- Дашборд -->
+        <div id="dashboard" style="display:none;">
+            <div class="dashboard-header">
+                <h1>Мои проекты</h1>
+                <button id="new-project-btn">+ Новый проект</button>
+            </div>
+            <div id="projects-grid"></div>
+        </div>
+
+        <!-- Редактор 3D -->
+        <div id="editor-container" style="display:none;">
+            <div class="editor-header">
+                <h2 id="project-name">Новый проект</h2>
+                <div class="editor-controls">
+                    <button id="save-project-btn">💾 Сохранить</button>
+                    <button id="export-stl-btn">📐 Экспорт STL</button>
+                    <button id="export-gltf-btn">🔄 Экспорт GLTF</button>
+                    <button id="back-dashboard-btn">← Назад</button>
+                </div>
+            </div>
+            <div id="editor-main">
+                <div id="three-container"></div>
+                <div id="tweakpane-container"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Клиентские скрипты -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.158.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.158.0/examples/jsm/",
+                "tweakpane": "https://cdn.jsdelivr.net/npm/tweakpane@4.0.0/dist/tweakpane.min.js",
+                "socket.io-client": "https://cdn.socket.io/4.7.2/socket.io.esm.min.js"
+            }
+        }
+    </script>
+    <script type="module" src="/public/js/main.js"></script>
 </body>
 </html>

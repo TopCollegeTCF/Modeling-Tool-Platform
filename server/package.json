@@ -1,11 +1,14 @@
 {
   "name": "server",
-  "version": "1.0.0",
+  "version": "0.0.4",
   "description": "Modeling Tool Platform Server",
-  "main": "index.js",
+  "type": "module",
+  "main": "src/app.js",
   "scripts": {
-    "start": "node index.js",
-    "dev": "nodemon index.js"
+    "start": "node src/app.js",
+    "dev": "nodemon src/app.js",
+    "migrate": "node src/config/migrate.js",
+    "test-db": "node src/scripts/test-db.js"
   },
   "dependencies": {
     "@fastify/cors": "^9.0.1",

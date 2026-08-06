@@ -6,12 +6,16 @@ import { TransformManager } from './TransformManager.js';
 import { EventManager } from './EventManager.js';
 import { ToolManager } from '../tools/ToolManager.js';
 import { UIManager } from '../ui/UIManager.js';
+import { CameraService } from '../services/CameraService.js';
+import { SpawnService } from '../services/SpawnService.js';
+import { SceneService } from '../services/SceneService.js';
 import { Cube } from '../entities/Cube.js';
 import { Sphere } from '../entities/Sphere.js';
 import { Cylinder } from '../entities/Cylinder.js';
 
 export class Editor {
     constructor() {
+        // Core managers
         this.sceneManager = new SceneManager();
         this.renderManager = new RenderManager();
         this.selectionManager = new SelectionManager();
@@ -20,11 +24,18 @@ export class Editor {
         this.toolManager = new ToolManager(this);
         this.uiManager = new UIManager(this);
         
+        // Services
+        this.cameraService = null;
+        this.spawnService = null;
+        this.sceneService = null;
+        
+        // State
         this.isRunning = false;
         this.entityIdCounter = 0;
         
         this.initUI();
         this.initScene();
+        this.initServices();
         this.initEvents();
         
         this.isRunning = true;
@@ -43,24 +54,66 @@ export class Editor {
         console.log('✅ Scene initialized');
     }
     
+    initServices() {
+        this.cameraService = new CameraService(this.renderManager.getCamera());
+        this.spawnService = new SpawnService(this);
+        this.sceneService = new SceneService(this);
+        console.log('✅ Services initialized');
+    }
+    
     initEvents() {
-        this.eventManager.init(this.renderManager.getRenderer().domElement);
+        const canvas = this.renderManager.getRenderer().domElement;
+        this.eventManager.init(canvas);
         this.setupEvents();
         console.log('✅ Events initialized');
     }
     
     setupEvents() {
-        this.eventManager.on('click', (event) => {
-            const selected = this.raycastSelect(event);
-            if (selected) {
-                this.selectionManager.select(selected);
-                this.uiManager.updateUI();
-            } else {
-                this.selectionManager.clear();
-                this.uiManager.updateUI();
+        // Mouse events for camera
+        this.eventManager.on('mousedown', (event) => {
+            if (event.button === 2) {
+                // Right click - orbit
+                this.cameraService.startOrbit(event.clientX, event.clientY);
+            } else if (event.button === 1 || (event.button === 0 && event.ctrlKey)) {
+                // Middle click or Ctrl+click - pan
+                this.cameraService.startPan(event.clientX, event.clientY);
             }
         });
         
+        this.eventManager.on('mousemove', (event) => {
+            this.cameraService.orbit(event.clientX, event.clientY);
+            this.cameraService.pan(event.clientX, event.clientY);
+        });
+        
+        this.eventManager.on('mouseup', () => {
+            this.cameraService.stopOrbit();
+            this.cameraService.stopPan();
+        });
+        
+        this.eventManager.on('wheel', (event) => {
+            event.preventDefault();
+            this.cameraService.zoom(event.deltaY > 0 ? 1 : -1);
+        });
+        
+        this.eventManager.on('contextmenu', (event) => {
+            event.preventDefault();
+        });
+        
+        // Selection click
+        this.eventManager.on('click', (event) => {
+            if (event.button === 0 && !event.ctrlKey && !event.metaKey) {
+                const selected = this.raycastSelect(event);
+                if (selected) {
+                    this.selectionManager.select(selected);
+                    this.uiManager.updateUI();
+                } else {
+                    this.selectionManager.clear();
+                    this.uiManager.updateUI();
+                }
+            }
+        });
+        
+        // Keyboard events
         this.eventManager.on('keydown', (event) => {
             if (event.key === 'Delete' || event.key === 'Backspace') {
                 this.deleteSelected();
@@ -70,7 +123,22 @@ export class Editor {
             if (event.key === '3') this.toolManager.switchTool('scale');
             if (event.key === '4') this.toolManager.switchTool('rotate');
             if (event.key === '5') this.toolManager.switchTool('face-edit');
+            if (event.key === 'r' || event.key === 'R') {
+                this.cameraService.reset();
+            }
+            if (event.key === 'm' || event.key === 'M') {
+                this.toggleSpawnMode();
+            }
         });
+    }
+    
+    toggleSpawnMode() {
+        const modes = ['center', 'marker'];
+        const current = this.spawnService.getMode();
+        const next = current === 'center' ? 'marker' : 'center';
+        this.spawnService.setMode(next);
+        this.uiManager.updateUI();
+        console.log(`📍 Spawn mode: ${next}`);
     }
     
     raycastSelect(event) {
@@ -95,12 +163,14 @@ export class Editor {
         return null;
     }
     
+    // ========== Фабрика сущностей ==========
+    
     addCube(options = {}) {
         this.entityIdCounter++;
         const cube = new Cube(1, 1, 1, options);
         cube.userData.id = this.entityIdCounter;
-        const count = this.sceneManager.getAllEntities().length;
-        cube.position.set(count * 1.5, 0.5, 0);
+        const pos = this.spawnService.getSpawnPosition();
+        cube.position.copy(pos);
         this.sceneManager.addEntity(cube);
         this.selectionManager.select(cube);
         this.uiManager.updateUI();
@@ -112,8 +182,8 @@ export class Editor {
         this.entityIdCounter++;
         const sphere = new Sphere(0.5, options);
         sphere.userData.id = this.entityIdCounter;
-        const count = this.sceneManager.getAllEntities().length;
-        sphere.position.set(count * 1.5, 0.5, 0);
+        const pos = this.spawnService.getSpawnPosition();
+        sphere.position.copy(pos);
         this.sceneManager.addEntity(sphere);
         this.selectionManager.select(sphere);
         this.uiManager.updateUI();
@@ -125,8 +195,8 @@ export class Editor {
         this.entityIdCounter++;
         const cylinder = new Cylinder(0.5, 0.5, 1, options);
         cylinder.userData.id = this.entityIdCounter;
-        const count = this.sceneManager.getAllEntities().length;
-        cylinder.position.set(count * 1.5, 0.5, 0);
+        const pos = this.spawnService.getSpawnPosition();
+        cylinder.position.copy(pos);
         this.sceneManager.addEntity(cylinder);
         this.selectionManager.select(cylinder);
         this.uiManager.updateUI();
@@ -143,12 +213,17 @@ export class Editor {
         }
     }
     
+    // ========== Цикл анимации ==========
+    
     animate() {
         if (!this.isRunning) return;
         requestAnimationFrame(() => this.animate());
+        
         this.toolManager.update();
         this.renderManager.render();
     }
+    
+    // ========== Геттеры ==========
     
     getScene() {
         return this.sceneManager.getScene();
@@ -160,5 +235,9 @@ export class Editor {
     
     getRenderer() {
         return this.renderManager.getRenderer();
+    }
+    
+    getSpawnService() {
+        return this.spawnService;
     }
 }

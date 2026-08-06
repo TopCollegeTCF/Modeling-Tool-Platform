@@ -1,23 +1,38 @@
 {
-  "name": "modeling-tool-platform",
-  "version": "1.0.0",
-  "description": "Интерактивный инструмент для 3D-моделирования в веб-пространстве.",
-  "main": "index.js",
+  "name": "3d-editor",
+  "version": "0.1.0",
+  "description": "3D Modeling Editor similar to Tinkercad with vertex/edge/face editing",
+  "type": "module",
+  "main": "server.js",
   "scripts": {
-    "start": "cd server && npm start",
-    "dev": "cd server && npm run dev",
-    "install:server": "cd server && npm install"
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "build": "echo 'No build step required for development'",
+    "test": "echo 'No tests configured'"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/TopCollegeTCF/Modeling-Tool-Platform.git"
+  "keywords": [
+    "3d-editor",
+    "three.js",
+    "modeling",
+    "cad",
+    "tinkercad"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "dependencies": {
+    "@fastify/static": "^7.0.0",
+    "fastify": "^4.25.0",
+    "mongodb": "^6.3.0",
+    "pg": "^8.11.3",
+    "socket.io": "^4.7.2",
+    "socket.io-client": "^4.7.2",
+    "three": "^0.160.0",
+    "tweakpane": "^4.0.1"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
-  "bugs": {
-    "url": "https://github.com/TopCollegeTCF/Modeling-Tool-Platform/issues"
+  "devDependencies": {
+    "nodemon": "^3.0.2"
   },
-  "homepage": "https://github.com/TopCollegeTCF/Modeling-Tool-Platform#readme"
+  "engines": {
+    "node": ">=18.0.0"
+  }
 }

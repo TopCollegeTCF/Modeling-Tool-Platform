@@ -1,21 +1,21 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>3D Editor</title>
     <link rel="stylesheet" href="/public/css/editor.css">
 </head>
 <body>
+    <div id="app"></div>
+
     <script type="importmap">
         {
             "imports": {
                 "three": "/node_modules/three/build/three.module.js",
-                "three/addons/": "/node_modules/three/examples/jsm/",
-                "socket.io-client": "/node_modules/socket.io-client/dist/socket.io.esm.min.js"
+                "three/addons/": "/node_modules/three/examples/jsm/"
             }
         }
     </script>
-    <script type="module" src="./src/main.js"></script>
+    <script type="module" src="/src/main.js"></script>
 </body>
 </html>

@@ -17,7 +17,7 @@ fastify.register(fastifyStatic, {
 });
 
 // Явно обрабатываем favicon
-fastify.get('/public/icons/favicon.ico', (_, reply) => {
+fastify.get('/public/info/favicon.ico', (_, reply) => {
     reply.status(204).send();
 });
 

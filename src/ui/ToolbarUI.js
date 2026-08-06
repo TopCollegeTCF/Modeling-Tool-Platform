@@ -1,3 +1,5 @@
+import { ICONS } from '../configs/icons.js';
+
 export class ToolbarUI {
     constructor(editor) {
         this.editor = editor;
@@ -14,48 +16,19 @@ export class ToolbarUI {
             transform: translateY(-50%);
             display: flex;
             flex-direction: column;
-            gap: 4px;
+            gap: 3px;
             z-index: 1000;
             background: rgba(16, 16, 32, 0.95);
             backdrop-filter: blur(10px);
-            padding: 8px;
+            padding: 6px;
             border-radius: 10px;
             border: 1px solid rgba(255,255,255,0.08);
         `;
+        this.element.setAttribute('data-panel', 'tools');
         
-        // Создаем кнопки для всех инструментов
         const tools = this.editor.toolManager.tools;
         tools.forEach((tool, name) => {
-            const btn = document.createElement('button');
-            btn.title = `${tool.name} (${tool.shortcut || ''})`;
-            btn.textContent = tool.icon || '🔧';
-            btn.dataset.tool = name;
-            btn.style.cssText = `
-                width: 36px;
-                height: 36px;
-                border: none;
-                border-radius: 6px;
-                background: transparent;
-                color: #888;
-                font-size: 16px;
-                cursor: pointer;
-                transition: all 0.2s;
-            `;
-            
-            btn.addEventListener('mouseenter', () => {
-                btn.style.background = 'rgba(255,255,255,0.08)';
-                btn.style.color = '#fff';
-            });
-            btn.addEventListener('mouseleave', () => {
-                btn.style.background = 'transparent';
-                btn.style.color = '#888';
-            });
-            
-            btn.addEventListener('click', () => {
-                this.editor.toolManager.switchTool(name);
-                this.updateActiveTool(name);
-            });
-            
+            const btn = this.createToolButton(tool, name);
             this.element.appendChild(btn);
         });
         
@@ -63,17 +36,135 @@ export class ToolbarUI {
         const divider = document.createElement('div');
         divider.style.cssText = `
             border-top: 1px solid rgba(255,255,255,0.08);
-            margin: 4px 0;
+            margin: 3px 0;
         `;
         this.element.appendChild(divider);
         
+        // Кнопка настроек (только одна!)
+        const settingsBtn = this.createSettingsButton();
+        this.element.appendChild(settingsBtn);
+        
         // Кнопка удаления
-        const deleteBtn = document.createElement('button');
-        deleteBtn.textContent = '🗑';
-        deleteBtn.title = 'Delete selected (Delete)';
-        deleteBtn.style.cssText = `
-            width: 36px;
-            height: 36px;
+        const deleteBtn = this.createDeleteButton();
+        this.element.appendChild(deleteBtn);
+        
+        document.body.appendChild(this.element);
+        this.updateActiveTool('select');
+        console.log('✅ ToolbarUI initialized');
+    }
+    
+    createToolButton(tool, name) {
+        const btn = document.createElement('button');
+        btn.title = `${tool.name} (${tool.shortcut || ''})`;
+        btn.dataset.tool = name;
+        btn.style.cssText = `
+            width: 32px;
+            height: 32px;
+            border: none;
+            border-radius: 6px;
+            background: transparent;
+            color: #888;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        `;
+        
+        const iconMap = {
+            'select': ICONS.select,
+            'move': ICONS.move,
+            'scale': ICONS.scale,
+            'rotate': ICONS.rotate,
+            'face-edit': ICONS.faceEdit,
+        };
+        
+        const img = document.createElement('img');
+        img.src = iconMap[name] || '';
+        img.style.cssText = 'width:18px; height:18px; filter: invert(0.5);';
+        img.alt = tool.name;
+        img.onerror = () => {
+            img.style.display = 'none';
+            btn.textContent = tool.icon || '🔧';
+        };
+        btn.appendChild(img);
+        
+        btn.addEventListener('mouseenter', () => {
+            btn.style.background = 'rgba(255,255,255,0.08)';
+            btn.style.color = '#fff';
+            const imgEl = btn.querySelector('img');
+            if (imgEl) imgEl.style.filter = 'invert(1)';
+        });
+        btn.addEventListener('mouseleave', () => {
+            btn.style.background = 'transparent';
+            btn.style.color = '#888';
+            const imgEl = btn.querySelector('img');
+            if (imgEl) imgEl.style.filter = 'invert(0.5)';
+        });
+        
+        btn.addEventListener('click', () => {
+            this.editor.toolManager.switchTool(name);
+            this.updateActiveTool(name);
+        });
+        
+        return btn;
+    }
+    
+    createSettingsButton() {
+        const btn = document.createElement('button');
+        btn.title = 'Settings';
+        btn.style.cssText = `
+            width: 32px;
+            height: 32px;
+            border: none;
+            border-radius: 6px;
+            background: transparent;
+            color: #888;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        `;
+        
+        const img = document.createElement('img');
+        img.src = ICONS.settings;
+        img.style.cssText = 'width:18px; height:18px; filter: invert(0.5);';
+        img.alt = 'Settings';
+        img.onerror = () => {
+            img.style.display = 'none';
+            btn.textContent = '⚙';
+        };
+        btn.appendChild(img);
+        
+        btn.addEventListener('mouseenter', () => {
+            btn.style.background = 'rgba(255,255,255,0.08)';
+            btn.style.color = '#fff';
+            const imgEl = btn.querySelector('img');
+            if (imgEl) imgEl.style.filter = 'invert(1)';
+        });
+        btn.addEventListener('mouseleave', () => {
+            btn.style.background = 'transparent';
+            btn.style.color = '#888';
+            const imgEl = btn.querySelector('img');
+            if (imgEl) imgEl.style.filter = 'invert(0.5)';
+        });
+        
+        btn.addEventListener('click', () => {
+            this.editor.settingsUI.toggle();
+        });
+        
+        return btn;
+    }
+    
+    createDeleteButton() {
+        const btn = document.createElement('button');
+        btn.title = 'Delete selected (Delete)';
+        btn.style.cssText = `
+            width: 32px;
+            height: 32px;
             border: none;
             border-radius: 6px;
             background: transparent;
@@ -81,33 +172,47 @@ export class ToolbarUI {
             font-size: 16px;
             cursor: pointer;
             transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         `;
-        deleteBtn.addEventListener('mouseenter', () => {
-            deleteBtn.style.background = 'rgba(255,80,80,0.15)';
+        
+        const img = document.createElement('img');
+        img.src = ICONS.delete;
+        img.style.cssText = 'width:18px; height:18px; filter: invert(0.3) sepia(1) hue-rotate(-30deg) saturate(10);';
+        img.alt = 'Delete';
+        img.onerror = () => {
+            img.style.display = 'none';
+            btn.textContent = '🗑';
+        };
+        btn.appendChild(img);
+        
+        btn.addEventListener('mouseenter', () => {
+            btn.style.background = 'rgba(255,80,80,0.15)';
         });
-        deleteBtn.addEventListener('mouseleave', () => {
-            deleteBtn.style.background = 'transparent';
+        btn.addEventListener('mouseleave', () => {
+            btn.style.background = 'transparent';
         });
-        deleteBtn.addEventListener('click', () => {
+        
+        btn.addEventListener('click', () => {
             this.editor.deleteSelected();
         });
-        this.element.appendChild(deleteBtn);
         
-        document.body.appendChild(this.element);
-        
-        // Обновляем активный инструмент
-        this.updateActiveTool('select');
+        return btn;
     }
     
     updateActiveTool(name) {
         const buttons = this.element.querySelectorAll('button[data-tool]');
         buttons.forEach(btn => {
+            const img = btn.querySelector('img');
             if (btn.dataset.tool === name) {
                 btn.style.background = 'rgba(74, 158, 255, 0.2)';
                 btn.style.color = '#4a9eff';
+                if (img) img.style.filter = 'invert(0.5) sepia(1) hue-rotate(200deg) saturate(5)';
             } else {
                 btn.style.background = 'transparent';
                 btn.style.color = '#888';
+                if (img) img.style.filter = 'invert(0.5)';
             }
         });
     }

@@ -1,6 +1,8 @@
 import { ToolbarUI } from './ToolbarUI.js';
 import { PropertiesUI } from './PropertiesUI.js';
 import { SceneTreeUI } from './SceneTreeUI.js';
+import { SpawnUI } from './SpawnUI.js';
+import { SettingsUI } from './SettingsUI.js';
 
 export class UIManager {
     constructor(editor) {
@@ -8,14 +10,29 @@ export class UIManager {
         this.toolbar = new ToolbarUI(editor);
         this.properties = new PropertiesUI(editor);
         this.sceneTree = new SceneTreeUI(editor);
+        this.spawn = new SpawnUI(editor);
+        this.settings = new SettingsUI(editor);
         this.uiElements = [];
     }
     
     init() {
         console.log('🖥 Initializing UI...');
+        
+        // Инициализируем все панели
         this.toolbar.init();
         this.properties.init();
         this.sceneTree.init();
+        this.spawn.init();
+        this.settings.init();
+        
+        // Регистрируем панели в PanelService
+        if (this.editor.panelService) {
+            this.editor.panelService.registerPanel('properties', this.properties.element);
+            this.editor.panelService.registerPanel('sceneTree', this.sceneTree.element);
+            this.editor.panelService.registerPanel('tools', this.toolbar.element);
+            this.editor.panelService.registerPanel('spawn', this.spawn.element);
+        }
+        
         console.log('✅ UI initialized');
         
         // Подписка на изменения выделения
@@ -27,13 +44,6 @@ export class UIManager {
     updateUI() {
         this.properties.update();
         this.sceneTree.update();
-    }
-    
-    createPanel(title, id) {
-        const panel = document.createElement('div');
-        panel.id = id || `panel-${Date.now()}`;
-        panel.className = 'panel';
-        panel.innerHTML = `<div class="panel-title">${title}</div>`;
-        return panel;
+        this.spawn.update();
     }
 }

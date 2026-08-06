@@ -9,6 +9,8 @@ import { UIManager } from '../ui/UIManager.js';
 import { CameraService } from '../services/CameraService.js';
 import { SpawnService } from '../services/SpawnService.js';
 import { SceneService } from '../services/SceneService.js';
+import { PanelService } from '../services/PanelService.js';
+import { StorageManager } from '../storage/StorageManager.js';
 import { Cube } from '../entities/Cube.js';
 import { Sphere } from '../entities/Sphere.js';
 import { Cylinder } from '../entities/Cylinder.js';
@@ -24,27 +26,26 @@ export class Editor {
         this.toolManager = new ToolManager(this);
         this.uiManager = new UIManager(this);
         
-        // Services
+        // Services (инициализируются позже)
         this.cameraService = null;
         this.spawnService = null;
         this.sceneService = null;
+        this.panelService = null;
+        
+        // Storage
+        this.storage = new StorageManager();
         
         // State
         this.isRunning = false;
         this.entityIdCounter = 0;
         
-        this.initUI();
         this.initScene();
         this.initServices();
+        this.initUI();
         this.initEvents();
         
         this.isRunning = true;
         this.animate();
-    }
-    
-    initUI() {
-        this.uiManager.init();
-        console.log('✅ UI initialized');
     }
     
     initScene() {
@@ -58,7 +59,15 @@ export class Editor {
         this.cameraService = new CameraService(this.renderManager.getCamera());
         this.spawnService = new SpawnService(this);
         this.sceneService = new SceneService(this);
+        this.panelService = new PanelService(this);
         console.log('✅ Services initialized');
+    }
+    
+    initUI() {
+        this.uiManager.init();
+        // Сохраняем ссылку на settingsUI для доступа из глобального скоупа
+        this.settingsUI = this.uiManager.settings;
+        console.log('✅ UI initialized');
     }
     
     initEvents() {
@@ -72,10 +81,8 @@ export class Editor {
         // Mouse events for camera
         this.eventManager.on('mousedown', (event) => {
             if (event.button === 2) {
-                // Right click - orbit
                 this.cameraService.startOrbit(event.clientX, event.clientY);
             } else if (event.button === 1 || (event.button === 0 && event.ctrlKey)) {
-                // Middle click or Ctrl+click - pan
                 this.cameraService.startPan(event.clientX, event.clientY);
             }
         });
@@ -138,6 +145,10 @@ export class Editor {
         const next = current === 'center' ? 'marker' : 'center';
         this.spawnService.setMode(next);
         this.uiManager.updateUI();
+        // Обновляем настройки если они открыты
+        if (this.settingsUI && this.settingsUI.isOpen) {
+            this.settingsUI.render();
+        }
         console.log(`📍 Spawn mode: ${next}`);
     }
     
@@ -162,8 +173,6 @@ export class Editor {
         }
         return null;
     }
-    
-    // ========== Фабрика сущностей ==========
     
     addCube(options = {}) {
         this.entityIdCounter++;
@@ -213,8 +222,6 @@ export class Editor {
         }
     }
     
-    // ========== Цикл анимации ==========
-    
     animate() {
         if (!this.isRunning) return;
         requestAnimationFrame(() => this.animate());
@@ -222,8 +229,6 @@ export class Editor {
         this.toolManager.update();
         this.renderManager.render();
     }
-    
-    // ========== Геттеры ==========
     
     getScene() {
         return this.sceneManager.getScene();
@@ -239,5 +244,9 @@ export class Editor {
     
     getSpawnService() {
         return this.spawnService;
+    }
+    
+    getPanelService() {
+        return this.panelService;
     }
 }

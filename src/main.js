@@ -1,6 +1,6 @@
 import { Editor } from './core/Editor.js';
 
-console.log('Starting editor...');
+console.log('🚀 Starting editor...');
 
 const editor = new Editor();
 window.editor = editor;
@@ -11,6 +11,7 @@ console.log('  - editor.addCube()');
 console.log('  - editor.addSphere()');
 console.log('  - editor.addCylinder()');
 console.log('  - editor.toggleSpawnMode() - toggle spawn mode');
+console.log('  - editor.uiManager.settings.toggle() - open settings');
 console.log('  - editor.cameraService.reset() - reset camera');
 console.log('🎮 Controls:');
 console.log('  - Right click + drag: Orbit');
@@ -18,15 +19,17 @@ console.log('  - Middle click + drag: Pan');
 console.log('  - Scroll: Zoom');
 console.log('  - R: Reset camera');
 console.log('  - M: Toggle spawn mode');
+console.log('⚙️ Settings: Click gear icon in toolbar');
+console.log('💾 Settings saved to localStorage');
 
 // Автоматически создаем тестовый куб
 setTimeout(() => {
     try {
         if (editor && editor.sceneManager) {
             const cube = editor.addCube();
-            console.log('Test cube created:', cube);
+            console.log('✅ Test cube created:', cube);
         }
     } catch (e) {
-        console.error('Error creating test cube:', e);
+        console.error('❌ Error creating test cube:', e);
     }
 }, 100);

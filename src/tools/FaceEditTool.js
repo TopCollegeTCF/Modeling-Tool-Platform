@@ -8,7 +8,6 @@ export class FaceEditTool extends Tool {
         this.icon = '▦';
         this.shortcut = '5';
         
-        // Состояние
         this.isDragging = false;
         this.isHovering = false;
         this.selectedFace = null;
@@ -16,10 +15,8 @@ export class FaceEditTool extends Tool {
         this.startPoint = new THREE.Vector3();
         this.startPosition = new THREE.Vector3();
         
-        // Режимы редактирования
-        this.editMode = 'extrude'; // 'extrude' | 'inset' | 'move'
+        this.editMode = 'extrude';
         
-        // Трехмерные объекты
         this.raycaster = new THREE.Raycaster();
         this.mouse = new THREE.Vector2();
         this.faceHelpers = [];
@@ -27,9 +24,11 @@ export class FaceEditTool extends Tool {
         this.faceData = [];
         this.extrudeDirection = new THREE.Vector3();
         
-        // Настройки
         this.snapDistance = 0.05;
         this.extrudeDistance = 0;
+        
+        // Флаг для отладки
+        this.debug = true;
     }
 
     onActivate() {
@@ -59,31 +58,42 @@ export class FaceEditTool extends Tool {
             return;
         }
 
-        // Проверяем, поддерживает ли объект редактирование граней
+        console.log('📐 Showing face helpers for:', selected.userData.name);
+
         if (!this.supportsFaceEditing(selected)) {
+            console.warn('⚠️ Object does not support face editing:', selected.userData.type);
             this.hideFaceHelpers();
             return;
         }
 
         this.hideFaceHelpers();
         this.faceData = this.extractFaces(selected);
-        
-        // Создаем хелперы для каждой грани
+        console.log(`📐 Extracted ${this.faceData.length} faces`);
+
         this.faceData.forEach((face, index) => {
             const helper = this.createFaceHelper(face, index);
             this.faceHelpers.push(helper);
             this.editor.getScene().add(helper);
         });
 
-        // Добавляем сетку на объект для визуализации полигонов
         this.showWireframe(selected);
     }
 
     supportsFaceEditing(entity) {
-        // Поддерживаем кубы и подобные объекты с плоскими гранями
-        return entity.type === 'cube' || 
-               entity.userData.type === 'cube' ||
-               entity.geometry.type === 'BoxGeometry';
+        const supported = entity.type === 'cube' || 
+                         entity.userData.type === 'cube' ||
+                         entity.geometry.type === 'BoxGeometry';
+        
+        if (this.debug) {
+            console.log(`🔍 Checking face editing support for ${entity.userData.name}:`, {
+                type: entity.type,
+                userDataType: entity.userData.type,
+                geometryType: entity.geometry.type,
+                supported: supported
+            });
+        }
+        
+        return supported;
     }
 
     extractFaces(entity) {
@@ -91,15 +101,17 @@ export class FaceEditTool extends Tool {
         const position = geometry.getAttribute('position');
         const faces = [];
         
-        // Для BoxGeometry используем грани по 2 треугольника на грань
+        if (!position) {
+            console.warn('⚠️ No position attribute found');
+            return faces;
+        }
+
         const vertexCount = position.count;
-        const faceGroupSize = 6; // 2 треугольника * 3 вершины
-        
+        const faceGroupSize = 6;
+
         for (let i = 0; i < vertexCount; i += faceGroupSize) {
             const vertices = [];
-            const normals = [];
             
-            // Собираем вершины грани (2 треугольника)
             for (let j = 0; j < faceGroupSize; j++) {
                 const idx = i + j;
                 if (idx >= vertexCount) break;
@@ -112,14 +124,11 @@ export class FaceEditTool extends Tool {
             
             if (vertices.length < 6) continue;
             
-            // Вычисляем центр грани
             const center = new THREE.Vector3();
             vertices.forEach(v => center.add(v));
             center.divideScalar(vertices.length);
             
-            // Вычисляем нормаль (средняя)
             const normal = new THREE.Vector3();
-            // Берем первые 3 вершины для нормали
             const a = vertices[0];
             const b = vertices[1];
             const c = vertices[2];
@@ -127,8 +136,6 @@ export class FaceEditTool extends Tool {
             const edge2 = new THREE.Vector3().copy(c).sub(a);
             normal.crossVectors(edge1, edge2).normalize();
             
-            // Определяем направление (внешняя или внутренняя нормаль)
-            // Проверяем, смотрит ли нормаль от центра объекта
             const toCenter = new THREE.Vector3().copy(center).multiplyScalar(-1);
             if (normal.dot(toCenter) < 0) {
                 normal.negate();
@@ -143,6 +150,10 @@ export class FaceEditTool extends Tool {
             });
         }
         
+        if (this.debug) {
+            console.log(`📐 Extracted ${faces.length} faces from geometry`);
+        }
+        
         return faces;
     }
 
@@ -150,7 +161,6 @@ export class FaceEditTool extends Tool {
         const size = 0.15;
         const group = new THREE.Group();
         
-        // Прозрачная плоскость для клика
         const plane = new THREE.Mesh(
             new THREE.PlaneGeometry(size * 2, size * 2),
             new THREE.MeshBasicMaterial({
@@ -162,7 +172,6 @@ export class FaceEditTool extends Tool {
             })
         );
         
-        // Рамка для визуализации
         const border = new THREE.Line(
             new THREE.EdgesGeometry(new THREE.PlaneGeometry(size * 2, size * 2)),
             new THREE.LineBasicMaterial({
@@ -175,10 +184,8 @@ export class FaceEditTool extends Tool {
         group.add(plane);
         group.add(border);
         
-        // Позиционируем на центре грани
         group.position.copy(face.center);
         
-        // Ориентируем по нормали
         const up = new THREE.Vector3(0, 1, 0);
         const quaternion = new THREE.Quaternion().setFromUnitVectors(up, face.normal);
         group.quaternion.copy(quaternion);
@@ -186,15 +193,12 @@ export class FaceEditTool extends Tool {
         group.userData.faceIndex = index;
         group.userData.faceData = face;
         group.userData.type = 'face-helper';
-        
-        // Делаем хелпер кликабельным
         group.userData.isSelectable = true;
         
         return group;
     }
 
     showWireframe(entity) {
-        // Добавляем поверх сетку для визуализации полигонов
         if (this.wireframeMesh) {
             this.editor.getScene().remove(this.wireframeMesh);
             this.wireframeMesh.geometry.dispose();
@@ -227,7 +231,6 @@ export class FaceEditTool extends Tool {
         });
         this.faceHelpers = [];
         
-        // Удаляем сетку
         if (this.wireframeMesh) {
             this.editor.getScene().remove(this.wireframeMesh);
             this.wireframeMesh.geometry.dispose();
@@ -247,10 +250,8 @@ export class FaceEditTool extends Tool {
 
     highlightFace(face) {
         this.clearHighlight();
-        
         if (!face) return;
         
-        // Создаем подсвеченную грань
         const geometry = new THREE.PlaneGeometry(0.5, 0.5);
         const material = new THREE.MeshBasicMaterial({
             color: 0x4a9eff,
@@ -271,14 +272,15 @@ export class FaceEditTool extends Tool {
     }
 
     getFaceFromIntersect(intersect) {
-        // Ищем хелпер в иерархии
         let object = intersect.object;
-        let faceIndex = null;
         
-        // Проходим вверх по иерархии
         while (object) {
             if (object.userData && object.userData.type === 'face-helper') {
-                return this.faceData[object.userData.faceIndex];
+                const faceData = this.faceData[object.userData.faceIndex];
+                if (this.debug) {
+                    console.log('🎯 Found face helper:', object.userData.faceIndex);
+                }
+                return faceData;
             }
             if (object.parent) {
                 object = object.parent;
@@ -291,6 +293,8 @@ export class FaceEditTool extends Tool {
     }
 
     onMouseDown(event) {
+        console.log('🖱️ FaceEditTool: onMouseDown');
+        
         const renderer = this.editor.getRenderer();
         const camera = this.editor.getCamera();
         const rect = renderer.domElement.getBoundingClientRect();
@@ -303,6 +307,10 @@ export class FaceEditTool extends Tool {
         // Проверяем попадание в хелперы граней
         const intersects = this.raycaster.intersectObjects(this.faceHelpers, true);
         
+        if (this.debug) {
+            console.log(`🔍 Raycast hit ${intersects.length} objects`);
+        }
+        
         if (intersects.length > 0) {
             const face = this.getFaceFromIntersect(intersects[0]);
             if (face) {
@@ -314,8 +322,6 @@ export class FaceEditTool extends Tool {
                 this.extrudeDistance = 0;
                 
                 this.highlightFace(face);
-                
-                // Меняем курсор
                 this.editor.getRenderer().domElement.style.cursor = 'grabbing';
                 
                 console.log('🎯 Face selected:', face.index);
@@ -323,9 +329,9 @@ export class FaceEditTool extends Tool {
             }
         }
         
-        // Сбрасываем выделение грани
         this.selectedFace = null;
         this.clearHighlight();
+        console.log('❌ No face selected');
     }
 
     onMouseMove(event) {
@@ -336,7 +342,6 @@ export class FaceEditTool extends Tool {
         this.mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
         this.mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
         
-        // Обновляем ховер
         this.raycaster.setFromCamera(this.mouse, camera);
         const intersects = this.raycaster.intersectObjects(this.faceHelpers, true);
         
@@ -345,7 +350,6 @@ export class FaceEditTool extends Tool {
             if (face && face !== this.hoveredFace) {
                 this.hoveredFace = face;
                 this.editor.getRenderer().domElement.style.cursor = 'pointer';
-                // Показываем подсветку при наведении
                 this.highlightFace(face);
             }
         } else if (!this.isDragging) {
@@ -356,9 +360,7 @@ export class FaceEditTool extends Tool {
             }
         }
         
-        // Если перетаскиваем грань
         if (this.isDragging && this.selectedFace) {
-            // Вычисляем смещение в направлении нормали
             const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
             const point = new THREE.Vector3();
             this.raycaster.ray.intersectPlane(plane, point);
@@ -366,14 +368,10 @@ export class FaceEditTool extends Tool {
             if (point) {
                 const delta = point.y - this.startPoint.y;
                 const extrusion = delta * 0.1;
-                
-                // Ограничиваем максимальное смещение
                 const maxExtrusion = 0.5;
                 const clampedExtrusion = Math.max(-maxExtrusion, Math.min(maxExtrusion, extrusion));
-                
                 this.extrudeDistance = clampedExtrusion;
                 
-                // Обновляем позицию подсветки
                 if (this.highlightMesh) {
                     const newPos = this.selectedFace.center.clone().add(
                         this.selectedFace.normal.clone().multiplyScalar(clampedExtrusion)
@@ -386,14 +384,13 @@ export class FaceEditTool extends Tool {
 
     onMouseUp(event) {
         if (this.isDragging && this.selectedFace) {
-            // Применяем изменения к объекту
+            console.log(`📐 Applying face edit: extrusion = ${this.extrudeDistance.toFixed(2)}`);
             this.applyFaceEdit(this.selectedFace, this.extrudeDistance);
             
             this.isDragging = false;
             this.selectedFace = null;
             this.editor.getRenderer().domElement.style.cursor = 'default';
             
-            // Обновляем хелперы
             this.showFaceHelpers();
             this.editor.uiManager.updateUI();
         }
@@ -406,7 +403,6 @@ export class FaceEditTool extends Tool {
         const geometry = object.geometry;
         const position = geometry.getAttribute('position');
         
-        // Находим вершины, принадлежащие этой грани
         const vertexIndices = [];
         const epsilon = 0.001;
         
@@ -417,7 +413,6 @@ export class FaceEditTool extends Tool {
                 position.getZ(i)
             );
             
-            // Проверяем, лежит ли вершина на грани
             for (const vertex of face.vertices) {
                 if (v.distanceTo(vertex) < epsilon) {
                     vertexIndices.push(i);
@@ -426,7 +421,6 @@ export class FaceEditTool extends Tool {
             }
         }
         
-        // Перемещаем вершины в направлении нормали
         const offset = face.normal.clone().multiplyScalar(distance);
         
         vertexIndices.forEach(idx => {
@@ -439,7 +433,7 @@ export class FaceEditTool extends Tool {
         position.needsUpdate = true;
         geometry.computeVertexNormals();
         
-        console.log(`📐 Face edited: extrusion = ${distance.toFixed(2)}`);
+        console.log(`📐 Face edited: extrusion = ${distance.toFixed(2)}, ${vertexIndices.length} vertices moved`);
     }
 
     onUpdate() {

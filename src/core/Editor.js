@@ -10,6 +10,7 @@ import { CameraService } from '../services/CameraService.js';
 import { SpawnService } from '../services/SpawnService.js';
 import { SceneService } from '../services/SceneService.js';
 import { PanelService } from '../services/PanelService.js';
+import { GizmoService } from '../services/GizmoService.js';
 import { StorageManager } from '../storage/StorageManager.js';
 import { Cube } from '../entities/Cube.js';
 import { Sphere } from '../entities/Sphere.js';
@@ -26,11 +27,12 @@ export class Editor {
         this.toolManager = new ToolManager(this);
         this.uiManager = new UIManager(this);
         
-        // Services (инициализируются позже)
+        // Services
         this.cameraService = null;
         this.spawnService = null;
         this.sceneService = null;
         this.panelService = null;
+        this.gizmoService = null;
         
         // Storage
         this.storage = new StorageManager();
@@ -39,8 +41,10 @@ export class Editor {
         this.isRunning = false;
         this.entityIdCounter = 0;
         
+        // Инициализация в правильном порядке
         this.initScene();
         this.initServices();
+        this.initGizmo(); // ДО initUI, чтобы UI мог использовать Gizmo
         this.initUI();
         this.initEvents();
         
@@ -65,7 +69,6 @@ export class Editor {
     
     initUI() {
         this.uiManager.init();
-        // Сохраняем ссылку на settingsUI для доступа из глобального скоупа
         this.settingsUI = this.uiManager.settings;
         console.log('✅ UI initialized');
     }
@@ -137,6 +140,30 @@ export class Editor {
                 this.toggleSpawnMode();
             }
         });
+    }
+
+    initGizmo() {
+        try {
+            if (!this.renderManager || !this.cameraService) {
+                console.warn('⚠️ Cannot init Gizmo: RenderManager or CameraService not ready');
+                return;
+            }
+
+            this.gizmoService = new GizmoService(this);
+            this.gizmoService.init(
+                this.renderManager.getCamera(),
+                this.renderManager.getRenderer()
+            );
+
+            // Добавляем gizmo на сцену
+            if (this.sceneManager && this.sceneManager.getScene()) {
+                this.sceneManager.getScene().add(this.gizmoService.getGizmo());
+            }
+
+            console.log('✅ GizmoService initialized');
+        } catch (error) {
+            console.error('❌ Failed to initialize GizmoService:', error);
+        }
     }
     
     toggleSpawnMode() {
@@ -227,6 +254,9 @@ export class Editor {
         requestAnimationFrame(() => this.animate());
         
         this.toolManager.update();
+        if (this.gizmoService) {
+            this.gizmoService.update();
+        }
         this.renderManager.render();
     }
     

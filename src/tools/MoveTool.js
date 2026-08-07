@@ -1,5 +1,4 @@
 import { Tool } from './Tool.js';
-import * as THREE from 'three';
 
 export class MoveTool extends Tool {
     constructor(editor) {
@@ -7,68 +6,64 @@ export class MoveTool extends Tool {
         this.name = 'Move';
         this.icon = '✚';
         this.shortcut = '2';
-        
-        this.isDragging = false;
-        this.startPoint = new THREE.Vector3();
-        this.offset = new THREE.Vector3();
-        this.plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
-        this.raycaster = new THREE.Raycaster();
-        this.mouse = new THREE.Vector2();
+        this.gizmoService = null;
+        this.snapDistance = 0.1;
     }
-    
+
     onActivate() {
+        console.log('🔧 Move Tool activated');
         this.editor.getRenderer().domElement.style.cursor = 'move';
-    }
-    
-    onMouseDown(event) {
+        
+        if (!this.gizmoService) {
+            this.gizmoService = this.editor.gizmoService;
+        }
+
+        if (!this.gizmoService) {
+            console.error('❌ GizmoService not found');
+            return;
+        }
+
+        // Устанавливаем режим Move с привязкой
+        this.gizmoService.setMode('translate');
+        this.gizmoService.setTranslationSnap(this.snapDistance);
+
         const selected = this.editor.selectionManager.getSelected();
-        if (!selected) return;
-        
-        const renderer = this.editor.getRenderer();
-        const camera = this.editor.getCamera();
-        const rect = renderer.domElement.getBoundingClientRect();
-        
-        this.mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-        this.mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-        
-        this.raycaster.setFromCamera(this.mouse, camera);
-        
-        // Находим точку пересечения с плоскостью
-        const point = new THREE.Vector3();
-        this.raycaster.ray.intersectPlane(this.plane, point);
-        
-        if (point) {
-            this.isDragging = true;
-            this.startPoint.copy(point);
-            this.offset.copy(selected.position).sub(point);
+        if (selected) {
+            this.gizmoService.attach(selected);
+        } else {
+            this.gizmoService.detach();
         }
     }
-    
-    onMouseMove(event) {
-        if (!this.isDragging) return;
-        
-        const selected = this.editor.selectionManager.getSelected();
-        if (!selected) return;
-        
-        const renderer = this.editor.getRenderer();
-        const camera = this.editor.getCamera();
-        const rect = renderer.domElement.getBoundingClientRect();
-        
-        this.mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-        this.mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-        
-        this.raycaster.setFromCamera(this.mouse, camera);
-        
-        const point = new THREE.Vector3();
-        this.raycaster.ray.intersectPlane(this.plane, point);
-        
-        if (point) {
-            selected.position.copy(point.add(this.offset));
-            this.editor.uiManager.updateUI();
+
+    onDeactivate() {
+        console.log('🔧 Move Tool deactivated');
+        if (this.gizmoService) {
+            this.gizmoService.detach();
+        }
+        this.editor.getRenderer().domElement.style.cursor = 'default';
+    }
+
+    onUpdate() {
+        if (this.gizmoService) {
+            this.gizmoService.update();
         }
     }
-    
-    onMouseUp(event) {
-        this.isDragging = false;
+
+    onSelectionChanged(entity) {
+        if (!this.isActive) return;
+        
+        if (entity) {
+            this.gizmoService?.attach(entity);
+            this.gizmoService?.setTranslationSnap(this.snapDistance);
+        } else {
+            this.gizmoService?.detach();
+        }
+    }
+
+    setSnapDistance(value) {
+        this.snapDistance = value;
+        if (this.gizmoService) {
+            this.gizmoService.setTranslationSnap(value);
+        }
     }
 }

@@ -1,5 +1,4 @@
 import { Tool } from './Tool.js';
-import * as THREE from 'three';
 
 export class ScaleTool extends Tool {
     constructor(editor) {
@@ -7,70 +6,64 @@ export class ScaleTool extends Tool {
         this.name = 'Scale';
         this.icon = '⬛';
         this.shortcut = '3';
-        
-        this.isDragging = false;
-        this.startScale = new THREE.Vector3(1, 1, 1);
-        this.startPoint = new THREE.Vector3();
-        this.raycaster = new THREE.Raycaster();
-        this.mouse = new THREE.Vector2();
-        this.plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+        this.gizmoService = null;
+        this.snapScale = 0.1;
     }
-    
+
     onActivate() {
+        console.log('🔧 Scale Tool activated');
         this.editor.getRenderer().domElement.style.cursor = 'pointer';
-    }
-    
-    onMouseDown(event) {
+        
+        if (!this.gizmoService) {
+            this.gizmoService = this.editor.gizmoService;
+        }
+
+        if (!this.gizmoService) {
+            console.error('❌ GizmoService not found');
+            return;
+        }
+
+        // Устанавливаем режим Scale с привязкой
+        this.gizmoService.setMode('scale');
+        this.gizmoService.setScaleSnap(this.snapScale);
+
         const selected = this.editor.selectionManager.getSelected();
-        if (!selected) return;
-        
-        const renderer = this.editor.getRenderer();
-        const camera = this.editor.getCamera();
-        const rect = renderer.domElement.getBoundingClientRect();
-        
-        this.mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-        this.mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-        
-        this.raycaster.setFromCamera(this.mouse, camera);
-        
-        const point = new THREE.Vector3();
-        this.raycaster.ray.intersectPlane(this.plane, point);
-        
-        if (point) {
-            this.isDragging = true;
-            this.startPoint.copy(point);
-            this.startScale.copy(selected.scale);
+        if (selected) {
+            this.gizmoService.attach(selected);
+        } else {
+            this.gizmoService.detach();
         }
     }
-    
-    onMouseMove(event) {
-        if (!this.isDragging) return;
-        
-        const selected = this.editor.selectionManager.getSelected();
-        if (!selected) return;
-        
-        const renderer = this.editor.getRenderer();
-        const camera = this.editor.getCamera();
-        const rect = renderer.domElement.getBoundingClientRect();
-        
-        this.mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-        this.mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-        
-        this.raycaster.setFromCamera(this.mouse, camera);
-        
-        const point = new THREE.Vector3();
-        this.raycaster.ray.intersectPlane(this.plane, point);
-        
-        if (point) {
-            const delta = point.distanceTo(this.startPoint) * 0.02;
-            const factor = 1 + delta;
-            const scale = Math.max(0.01, this.startScale.x * factor);
-            selected.scale.set(scale, scale, scale);
-            this.editor.uiManager.updateUI();
+
+    onDeactivate() {
+        console.log('🔧 Scale Tool deactivated');
+        if (this.gizmoService) {
+            this.gizmoService.detach();
+        }
+        this.editor.getRenderer().domElement.style.cursor = 'default';
+    }
+
+    onUpdate() {
+        if (this.gizmoService) {
+            this.gizmoService.update();
         }
     }
-    
-    onMouseUp(event) {
-        this.isDragging = false;
+
+    onSelectionChanged(entity) {
+        if (!this.isActive) return;
+        
+        if (entity) {
+            this.gizmoService?.attach(entity);
+            this.gizmoService?.setScaleSnap(this.snapScale);
+        } else {
+            this.gizmoService?.detach();
+        }
+    }
+
+    setSnapScale(value) {
+        this.snapScale = value;
+        if (this.gizmoService) {
+            this.gizmoService.setScaleSnap(value);
+        }
     }
 }

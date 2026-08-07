@@ -10,6 +10,7 @@ import { CameraService } from '../services/CameraService.js';
 import { SpawnService } from '../services/SpawnService.js';
 import { SceneService } from '../services/SceneService.js';
 import { PanelService } from '../services/PanelService.js';
+import { GizmoService } from '../services/GizmoService.js';
 import { StorageManager } from '../storage/StorageManager.js';
 import { Cube } from '../entities/Cube.js';
 import { Sphere } from '../entities/Sphere.js';
@@ -26,11 +27,12 @@ export class Editor {
         this.toolManager = new ToolManager(this);
         this.uiManager = new UIManager(this);
         
-        // Services (инициализируются позже)
+        // Services
         this.cameraService = null;
         this.spawnService = null;
         this.sceneService = null;
         this.panelService = null;
+        this.gizmoService = null;
         
         // Storage
         this.storage = new StorageManager();
@@ -39,8 +41,10 @@ export class Editor {
         this.isRunning = false;
         this.entityIdCounter = 0;
         
+        // Инициализация
         this.initScene();
         this.initServices();
+        this.initGizmo();
         this.initUI();
         this.initEvents();
         
@@ -54,7 +58,7 @@ export class Editor {
         this.toolManager.init();
         console.log('✅ Scene initialized');
     }
-    
+
     initServices() {
         this.cameraService = new CameraService(this.renderManager.getCamera());
         this.spawnService = new SpawnService(this);
@@ -62,64 +66,117 @@ export class Editor {
         this.panelService = new PanelService(this);
         console.log('✅ Services initialized');
     }
+
+    initGizmo() {
+        try {
+            if (!this.renderManager || !this.cameraService) {
+                console.warn('⚠️ Cannot init Gizmo: RenderManager or CameraService not ready');
+                return;
+            }
+
+            this.gizmoService = new GizmoService(this);
+            this.gizmoService.init(
+                this.renderManager.getCamera(),
+                this.renderManager.getRenderer()
+            );
+
+            if (this.sceneManager && this.sceneManager.getScene()) {
+                this.sceneManager.getScene().add(this.gizmoService.getGizmo());
+            }
+
+            console.log('✅ GizmoService initialized');
+        } catch (error) {
+            console.error('❌ Failed to initialize GizmoService:', error);
+        }
+    }
     
     initUI() {
         this.uiManager.init();
-        // Сохраняем ссылку на settingsUI для доступа из глобального скоупа
         this.settingsUI = this.uiManager.settings;
         console.log('✅ UI initialized');
     }
-    
+
     initEvents() {
         const canvas = this.renderManager.getRenderer().domElement;
-        this.eventManager.init(canvas);
+        // Передаем toolManager в eventManager
+        this.eventManager.init(canvas, this.toolManager);
         this.setupEvents();
         console.log('✅ Events initialized');
     }
+
     
     setupEvents() {
         // Mouse events for camera
         this.eventManager.on('mousedown', (event) => {
+            // Не обрабатываем события, если активен Gizmo или FaceEditTool
+            const currentTool = this.toolManager.getCurrentTool();
+            if (currentTool && (currentTool.name === 'Face Edit' || currentTool.name === 'Move' || 
+                currentTool.name === 'Scale' || currentTool.name === 'Rotate')) {
+                // Инструменты сами обрабатывают события
+                return;
+            }
+
             if (event.button === 2) {
                 this.cameraService.startOrbit(event.clientX, event.clientY);
             } else if (event.button === 1 || (event.button === 0 && event.ctrlKey)) {
                 this.cameraService.startPan(event.clientX, event.clientY);
             }
         });
-        
+
         this.eventManager.on('mousemove', (event) => {
+            const currentTool = this.toolManager.getCurrentTool();
+            if (currentTool && (currentTool.name === 'Face Edit' || currentTool.name === 'Move' || 
+                currentTool.name === 'Scale' || currentTool.name === 'Rotate')) {
+                return;
+            }
+            
             this.cameraService.orbit(event.clientX, event.clientY);
             this.cameraService.pan(event.clientX, event.clientY);
         });
-        
+
         this.eventManager.on('mouseup', () => {
             this.cameraService.stopOrbit();
             this.cameraService.stopPan();
         });
-        
+
         this.eventManager.on('wheel', (event) => {
             event.preventDefault();
             this.cameraService.zoom(event.deltaY > 0 ? 1 : -1);
         });
-        
+
         this.eventManager.on('contextmenu', (event) => {
             event.preventDefault();
         });
-        
-        // Selection click
+
+        // Selection click - только для SelectTool
         this.eventManager.on('click', (event) => {
+            const currentTool = this.toolManager.getCurrentTool();
+            if (currentTool && currentTool.name !== 'Select') {
+                return; // Только SelectTool обрабатывает клики для выделения
+            }
+
             if (event.button === 0 && !event.ctrlKey && !event.metaKey) {
                 const selected = this.raycastSelect(event);
                 if (selected) {
                     this.selectionManager.select(selected);
                     this.uiManager.updateUI();
+                    // Обновляем Gizmo для нового выделения
+                    if (this.gizmoService) {
+                        const currentTool = this.toolManager.getCurrentTool();
+                        if (currentTool && currentTool.name !== 'Select') {
+                            this.gizmoService.attach(selected);
+                        }
+                    }
                 } else {
                     this.selectionManager.clear();
                     this.uiManager.updateUI();
+                    if (this.gizmoService) {
+                        this.gizmoService.detach();
+                    }
                 }
             }
         });
-        
+
         // Keyboard events
         this.eventManager.on('keydown', (event) => {
             if (event.key === 'Delete' || event.key === 'Backspace') {
@@ -227,6 +284,9 @@ export class Editor {
         requestAnimationFrame(() => this.animate());
         
         this.toolManager.update();
+        if (this.gizmoService) {
+            this.gizmoService.update();
+        }
         this.renderManager.render();
     }
     

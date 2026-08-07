@@ -14,11 +14,10 @@ export class UIManager {
         this.settings = new SettingsUI(editor);
         this.uiElements = [];
     }
-    
+
     init() {
         console.log('🖥 Initializing UI...');
         
-        // Инициализируем все панели
         this.toolbar.init();
         this.properties.init();
         this.sceneTree.init();
@@ -33,14 +32,26 @@ export class UIManager {
             this.editor.panelService.registerPanel('spawn', this.spawn.element);
         }
         
-        console.log('✅ UI initialized');
-        
         // Подписка на изменения выделения
         this.editor.selectionManager.addListener(() => {
             this.updateUI();
         });
+        
+        // Подписка на изменения Gizmo
+        if (this.editor.gizmoService) {
+            this.editor.gizmoService.addListener((event, value) => {
+                if (event === 'dragging') {
+                    // Обновляем свойства в реальном времени
+                    if (!value) {
+                        this.updateUI();
+                    }
+                }
+            });
+        }
+        
+        console.log('✅ UI initialized');
     }
-    
+
     updateUI() {
         this.properties.update();
         this.sceneTree.update();

@@ -77,7 +77,7 @@ export class ToolbarUI {
             'move': ICONS.move,
             'scale': ICONS.scale,
             'rotate': ICONS.rotate,
-            'face-edit': ICONS.faceEdit,
+            'duplicate': ICONS.duplicate,
         };
         
         const img = document.createElement('img');

@@ -10,6 +10,7 @@ export const ICONS = {
     scale: '/public/assets/icons/scale.svg',
     rotate: '/public/assets/icons/rotate.svg',
     faceEdit: '/public/assets/icons/face-edit.svg',
+    duplicate: '/public/assets/icons/duplicate.svg',
     
     // Действия
     delete: '/public/assets/icons/delete.svg',
@@ -67,5 +68,10 @@ export const ICON_SVG = {
     center: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <circle cx="12" cy="12" r="9"/>
         <circle cx="12" cy="12" r="2"/>
+    </svg>`,
+    // Добавляем SVG для Duplicate
+    duplicate: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="9" y="9" width="13" height="13" rx="2"/>
+        <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
     </svg>`,
 };

@@ -186,7 +186,7 @@ export class Editor {
             if (event.key === '2') this.toolManager.switchTool('move');
             if (event.key === '3') this.toolManager.switchTool('scale');
             if (event.key === '4') this.toolManager.switchTool('rotate');
-            if (event.key === '5') this.toolManager.switchTool('face-edit');
+            if (event.key === '5') this.toolManager.switchTool('duplicate'); // Изменено с 'face-edit'
             if (event.key === 'r' || event.key === 'R') {
                 this.cameraService.reset();
             }

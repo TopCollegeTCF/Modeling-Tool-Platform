@@ -2,7 +2,7 @@ import { SelectTool } from './SelectTool.js';
 import { MoveTool } from './MoveTool.js';
 import { ScaleTool } from './ScaleTool.js';
 import { RotateTool } from './RotateTool.js';
-import { FaceEditTool } from './FaceEditTool.js';
+import { DuplicateTool } from './DuplicateTool.js';
 
 export class ToolManager {
     constructor(editor) {
@@ -18,19 +18,19 @@ export class ToolManager {
         this.registerTool('move', new MoveTool(this.editor));
         this.registerTool('scale', new ScaleTool(this.editor));
         this.registerTool('rotate', new RotateTool(this.editor));
-        this.registerTool('face-edit', new FaceEditTool(this.editor));
-        
+        this.registerTool('duplicate', new DuplicateTool(this.editor));
+
         // Активируем select по умолчанию
         this.switchTool('select');
-        
+
         // Подписываемся на изменения выделения
         this.editor.selectionManager.addListener((entity) => {
             if (this.currentTool && this.currentTool.onSelectionChanged) {
                 this.currentTool.onSelectionChanged(entity);
             }
         });
-        
-        console.log('✅ ToolManager initialized with Gizmo support');
+
+        console.log('✅ ToolManager initialized with Duplicate support');
     }
 
     registerTool(name, tool) {
@@ -41,12 +41,12 @@ export class ToolManager {
     switchTool(name) {
         // Сохраняем предыдущий инструмент
         this.previousTool = this.currentTool;
-        
+
         // Деактивируем текущий
         if (this.currentTool) {
             this.currentTool.deactivate();
         }
-        
+
         // Активируем новый
         const tool = this.tools.get(name);
         if (tool) {

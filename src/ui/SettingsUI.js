@@ -355,16 +355,46 @@ export class SettingsUI {
 
     applyTheme(theme) {
         const colors = theme === 'light' ? COLORS.light : COLORS.dark;
+        
+        // 1. Фон страницы
         document.body.style.background = colors.background;
         
+        // 2. Фон сцены
+        if (this.editor.sceneManager) {
+            this.editor.sceneManager.setBackgroundTheme(theme);
+        }
+        
+        // 3. Все панели
         document.querySelectorAll('.panel, [data-panel]').forEach(el => {
             el.style.background = colors.surface;
             el.style.borderColor = colors.border;
+            el.style.color = colors.text.primary;
         });
         
-        if (this.editor.sceneManager) {
-            this.editor.sceneManager.updateGridColors(colors.grid);
+        // 4. Все поля ввода
+        document.querySelectorAll('input, .prop-input').forEach(el => {
+            el.style.background = colors.input.background;
+            el.style.borderColor = colors.input.border;
+            el.style.color = colors.input.color;
+        });
+        
+        // 5. Все label
+        document.querySelectorAll('label, .prop-label').forEach(el => {
+            el.style.color = colors.input.label;
+        });
+        
+        // 6. Обновляем PropertiesUI если открыт
+        if (this.editor.uiManager && this.editor.uiManager.properties) {
+            this.editor.uiManager.properties.update();
         }
+        
+        // 7. Обновляем SceneTreeUI если открыт
+        if (this.editor.uiManager && this.editor.uiManager.sceneTree) {
+            this.editor.uiManager.sceneTree.update();
+        }
+        
+        // Сохраняем тему
+        localStorage.setItem('editor_theme', theme);
     }
 
     getShowGrid() {
@@ -419,9 +449,29 @@ export class SettingsUI {
         const root = document.documentElement;
         root.style.setProperty('--ui-scale', scale);
         
+        // Получаем размеры экрана
+        const vw = window.innerWidth;
+        const vh = window.innerHeight;
+        
         document.querySelectorAll('.panel, [data-panel]').forEach(el => {
-            el.style.transform = `scale(${scale})`;
+            // Получаем оригинальные размеры элемента
+            const rect = el.getBoundingClientRect();
+            const originalWidth = rect.width;
+            const originalHeight = rect.height;
+            
+            // Проверяем, не вылезет ли элемент за экран
+            const maxScaleX = (vw * 0.9) / originalWidth;
+            const maxScaleY = (vh * 0.9) / originalHeight;
+            const finalScale = Math.min(scale, maxScaleX, maxScaleY);
+            
+            el.style.transform = `scale(${finalScale})`;
             el.style.transformOrigin = 'top left';
+            
+            // Компенсируем смещение
+            const offsetX = (originalWidth * (finalScale - 1)) / 2;
+            const offsetY = (originalHeight * (finalScale - 1)) / 2;
+            el.style.marginLeft = `-${offsetX}px`;
+            el.style.marginTop = `-${offsetY}px`;
         });
     }
 }

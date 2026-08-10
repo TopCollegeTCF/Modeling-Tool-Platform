@@ -197,6 +197,12 @@ export class Editor {
                 event.preventDefault();
                 this.redo();
             }
+            // быстрая смена ограничения камеры (Ctrl+Shift+F)
+            if (event.ctrlKey && event.shiftKey && event.key === 'F') {
+                event.preventDefault();
+                this.toggleCameraFloorLimit();
+            }
+
             if (event.key === '1') this.toolManager.switchTool('select');
             if (event.key === '2') this.toolManager.switchTool('move');
             if (event.key === '3') this.toolManager.switchTool('scale');
@@ -327,6 +333,20 @@ export class Editor {
     // Десериализация сцены из сохраненного файла
     importScene(data) {
         this.historyManager.importHistory(data);
+    }
+
+    // переключение ограничения камеры
+    toggleCameraFloorLimit() {
+        if (this.cameraService) {
+            this.cameraService.setAllowBelowFloor(!this.cameraService.getAllowBelowFloor());
+            
+            // Обновляем UI настроек, если они открыты
+            if (this.settingsUI && this.settingsUI.isOpen) {
+                this.settingsUI.render();
+            }
+            
+            console.log(`📷 Camera floor limit toggled via hotkey`);
+        }
     }
     
     animate() {

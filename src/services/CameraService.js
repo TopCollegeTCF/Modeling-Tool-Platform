@@ -16,9 +16,26 @@ export class CameraService {
         
         // настройки ограничений
         this.allowBelowFloor = CAMERA_CONFIG.limits.allowBelowFloor || false;
+
+        // загрузка настройки из localStorage
+        this.loadSettings();
         
         // Применяем настройки
         this.applyConfig();
+    }
+
+    // загрузка настроек из localStorage
+    loadSettings() {
+        try {
+            const saved = localStorage.getItem('editor_camera_allow_below_floor');
+            if (saved !== null) {
+                this.allowBelowFloor = JSON.parse(saved);
+                console.log(`📷 Camera setting loaded: allowBelowFloor = ${this.allowBelowFloor}`);
+            }
+        } catch (e) {
+            // Если ошибка, используем значение по умолчанию
+            this.allowBelowFloor = CAMERA_CONFIG.limits.allowBelowFloor || false;
+        }
     }
 
     applyConfig() {
@@ -34,7 +51,7 @@ export class CameraService {
         this.camera.updateProjectionMatrix();
     }
 
-    // 🔥 установка разрешения на опускание ниже пола
+    // установка разрешения на опускание ниже пола
     setAllowBelowFloor(allow) {
         this.allowBelowFloor = allow;
         console.log(`📷 Camera floor limit: ${allow ? 'OFF (can go below)' : 'ON (constrained)'}`);

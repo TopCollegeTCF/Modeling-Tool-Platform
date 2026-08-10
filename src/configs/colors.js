@@ -22,6 +22,12 @@
             muted: '#555555',
             accent: '#4a9eff',
         },
+        input: {
+            background: 'rgba(255, 255, 255, 0.05)',
+            border: 'rgba(255, 255, 255, 0.08)',
+            color: '#ffffff',
+            label: '#888888',
+        },
         grid: {
             main: '#444466',
             sub: '#222244',
@@ -39,6 +45,12 @@
             secondary: '#555555',
             muted: '#999999',
             accent: '#4a9eff',
+        },
+        input: {
+            background: 'rgba(0, 0, 0, 0.05)',
+            border: 'rgba(0, 0, 0, 0.1)',
+            color: '#1a1a2e',
+            label: '#555555',
         },
         grid: {
             main: '#ccccdd',

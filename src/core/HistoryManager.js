@@ -6,7 +6,7 @@
  * 🔮 Будущее: При подключении БД, история будет сохраняться в базу данных
  * 
  * @version 1.0.0
- * @author 3D Modeling Editor
+ * @author Gabryelf
  * @since 0.0.8
  */
  export class HistoryManager {

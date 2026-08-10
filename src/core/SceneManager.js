@@ -5,6 +5,11 @@ export class SceneManager {
         this.scene = null;
         this.entities = new Map();
         this.helpers = [];
+        this.gridHelper = null;
+        this.axesHelper = null;
+        this.showGrid = true;
+        this.showAxes = true;
+        this.helperSize = 'medium';
     }
     
     init() {
@@ -33,13 +38,91 @@ export class SceneManager {
     }
     
     createHelpers() {
-        const grid = new THREE.GridHelper(20, 20, 0x444466, 0x222244);
-        this.scene.add(grid);
-        this.helpers.push(grid);
-        
-        const axes = new THREE.AxesHelper(3);
-        this.scene.add(axes);
-        this.helpers.push(axes);
+        // Сетка
+        const gridSize = this.getGridSize();
+        const divisions = this.getDivisions();
+        this.gridHelper = new THREE.GridHelper(gridSize, divisions, 0x444466, 0x222244);
+        this.gridHelper.position.y = 0;
+        this.scene.add(this.gridHelper);
+        this.helpers.push(this.gridHelper);
+
+        // Оси
+        const axesLength = this.getAxesLength();
+        this.axesHelper = new THREE.AxesHelper(axesLength);
+        this.scene.add(this.axesHelper);
+        this.helpers.push(this.axesHelper);
+    }
+
+    getGridSize() {
+        const sizes = { small: 10, medium: 20, large: 30 };
+        return sizes[this.helperSize] || 20;
+    }
+
+    getDivisions() {
+        const divisions = { small: 10, medium: 20, large: 30 };
+        return divisions[this.helperSize] || 20;
+    }
+
+    getAxesLength() {
+        const lengths = { small: 1.5, medium: 3, large: 5 };
+        return lengths[this.helperSize] || 3;
+    }
+
+    setHelperSize(size) {
+        this.helperSize = size;
+        this.updateHelpers();
+    }
+
+    updateHelpers() {
+        // Удаляем старые хелперы
+        if (this.gridHelper) {
+            this.scene.remove(this.gridHelper);
+            this.gridHelper.dispose();
+        }
+        if (this.axesHelper) {
+            this.scene.remove(this.axesHelper);
+            this.axesHelper.dispose();
+        }
+
+        // Создаем новые
+        this.createHelpers();
+
+        // Применяем видимость
+        if (!this.showGrid && this.gridHelper) {
+            this.gridHelper.visible = false;
+        }
+        if (!this.showAxes && this.axesHelper) {
+            this.axesHelper.visible = false;
+        }
+    }
+
+    toggleGrid(show) {
+        this.showGrid = show;
+        if (this.gridHelper) {
+            this.gridHelper.visible = show;
+        }
+    }
+
+    toggleAxes(show) {
+        this.showAxes = show;
+        if (this.axesHelper) {
+            this.axesHelper.visible = show;
+        }
+    }
+
+    updateGridColors(colors) {
+        if (this.gridHelper) {
+            // Three.js GridHelper не поддерживает обновление цветов напрямую
+            // Пересоздаем сетку с новыми цветами
+            const gridSize = this.getGridSize();
+            const divisions = this.getDivisions();
+            this.scene.remove(this.gridHelper);
+            this.gridHelper.dispose();
+            this.gridHelper = new THREE.GridHelper(gridSize, divisions, colors.main, colors.sub);
+            this.gridHelper.position.y = 0;
+            this.gridHelper.visible = this.showGrid;
+            this.scene.add(this.gridHelper);
+        }
     }
     
     addEntity(entity) {

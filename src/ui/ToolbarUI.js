@@ -23,6 +23,8 @@ export class ToolbarUI {
             padding: 6px;
             border-radius: 10px;
             border: 1px solid rgba(255,255,255,0.08);
+            max-height: 90vh;
+            overflow-y: auto;
         `;
         this.element.setAttribute('data-panel', 'tools');
         
@@ -46,10 +48,12 @@ export class ToolbarUI {
 
         // В методе init() после кнопки Settings
 
-        // Кнопка Project Manager
-        const projectBtn = this.createActionButton('📁', 'Project Manager', () => {
-            this.editor.projectUI.open();
-        });
+        // Кнопка Project 
+        const projectBtn = this.createActionButtonWithIcon(
+            '/public/assets/icons/folder.svg',
+            'Project',
+            () => this.editor.projectUI.open()
+        );
         this.element.appendChild(projectBtn);
         
         // Кнопка удаления
@@ -65,15 +69,19 @@ export class ToolbarUI {
         this.element.appendChild(divider2);
 
         // Кнопка Undo
-        const undoBtn = this.createActionButton('↩️', 'Undo (Ctrl+Z)', () => {
-            this.editor.undo();
-        });
+        const undoBtn = this.createActionButtonWithIcon(
+            '/public/assets/icons/undo.svg',
+            'Undo (Ctrl+Z)',
+            () => this.editor.undo()
+        );
         this.element.appendChild(undoBtn);
 
         // Кнопка Redo
-        const redoBtn = this.createActionButton('↪️', 'Redo (Ctrl+Y)', () => {
-            this.editor.redo();
-        });
+        const redoBtn = this.createActionButtonWithIcon(
+            '/public/assets/icons/redo.svg',
+            'Redo (Ctrl+Y)',
+            () => this.editor.redo()
+        );
         this.element.appendChild(redoBtn);
         
         document.body.appendChild(this.element);
@@ -230,7 +238,7 @@ export class ToolbarUI {
     }
 
     // Вспомогательный метод для создания кнопок действий
-    createActionButton(icon, title, onClick) {
+    createActionButtonWithIcon(iconPath, title, onClick) {
         const btn = document.createElement('button');
         btn.title = title;
         btn.style.cssText = `
@@ -247,13 +255,30 @@ export class ToolbarUI {
             align-items: center;
             justify-content: center;
         `;
-        btn.textContent = icon;
+
+        const img = document.createElement('img');
+        img.src = iconPath;
+        img.style.cssText = 'width:18px; height:18px; filter: invert(0.5);';
+        img.alt = title;
+        img.onerror = () => {
+            img.style.display = 'none';
+            btn.textContent = this.getEmojiForAction(title);
+        };
+
+        btn.appendChild(img);
+
         btn.addEventListener('mouseenter', () => {
             btn.style.background = 'rgba(255,255,255,0.08)';
+            const imgEl = btn.querySelector('img');
+            if (imgEl) imgEl.style.filter = 'invert(1)';
         });
+
         btn.addEventListener('mouseleave', () => {
             btn.style.background = 'transparent';
+            const imgEl = btn.querySelector('img');
+            if (imgEl) imgEl.style.filter = 'invert(0.5)';
         });
+
         btn.addEventListener('click', onClick);
         return btn;
     }
@@ -272,5 +297,16 @@ export class ToolbarUI {
                 if (img) img.style.filter = 'invert(0.5)';
             }
         });
+    }
+
+    getEmojiForAction(title) {
+        const map = {
+            'Undo (Ctrl+Z)': '↩️',
+            'Redo (Ctrl+Y)': '↪️',
+            'Project Manager': '📁',
+            'Delete selected (Delete)': '🗑️',
+            'Settings': '⚙️'
+        };
+        return map[title] || '🔧';
     }
 }

@@ -1,6 +1,7 @@
 import { TEMPLATES, createElement, applyStyles } from '../configs/templates.js';
 import { ICONS } from '../configs/icons.js';
 import { PANEL_NAMES, ALL_PANELS } from '../configs/panels.js';
+import { COLORS } from '../configs/colors.js';
 
 export class SettingsUI {
     constructor(editor) {
@@ -11,7 +12,6 @@ export class SettingsUI {
     }
 
     init() {
-        // Кнопка создается в ToolbarUI, не дублируем!
         this.element = createElement('div', {
             id: 'settings-panel',
             styles: `
@@ -102,14 +102,19 @@ export class SettingsUI {
             return;
         }
 
+        // НАСТРОЙКИ ДО СОЗДАНИЯ HTML
+        const currentTheme = this.getCurrentTheme();
+        const showGrid = this.getShowGrid();
+        const showAxes = this.getShowAxes();
+        const helperSize = this.getHelperSize();
+        const uiScale = this.getUIScale();
         const positions = panelService.getAvailablePositions();
         const spawnService = this.editor.spawnService;
         const mode = spawnService ? spawnService.getMode() : 'center';
-        
-        // 🔥 НОВОЕ: получаем состояние ограничения камеры
         const cameraService = this.editor.cameraService;
         const allowBelowFloor = cameraService ? cameraService.getAllowBelowFloor() : false;
 
+        // СОЗДАЕМ HTML СТРОКУ С НАЧАЛА
         let html = `
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
                 <h2 style="color:#fff; font-weight:400; font-size:18px; margin:0;">${this.createIconHTML(ICONS.settings, 20)} Settings</h2>
@@ -119,7 +124,104 @@ export class SettingsUI {
                 </button>
             </div>
 
-            <!-- 🔥 НОВЫЙ БЛОК: Настройки камеры -->
+            <!-- 🎨 НАСТРОЙКИ ОТОБРАЖЕНИЯ -->
+            <div style="margin-bottom:16px; padding:12px; background:rgba(255,255,255,0.03); border-radius:6px;">
+                <div style="color:#888; font-size:11px; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px;">
+                    🎨 Display Settings
+                </div>
+
+                <!-- Тема -->
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                    <span style="color:#aaa; font-size:11px;">Theme</span>
+                    <div style="display:flex; gap:4px;">
+                        <button onclick="window.editor.settingsUI.setTheme('dark')"
+                                style="padding:4px 12px; border:1px solid ${currentTheme === 'dark' ? '#4a9eff' : 'rgba(255,255,255,0.08)'};
+                                       border-radius:4px; background:${currentTheme === 'dark' ? 'rgba(74,158,255,0.15)' : 'transparent'};
+                                       color:${currentTheme === 'dark' ? '#4a9eff' : '#888'}; cursor:pointer; font-size:11px;">
+                            🌙 Dark
+                        </button>
+                        <button onclick="window.editor.settingsUI.setTheme('light')"
+                                style="padding:4px 12px; border:1px solid ${currentTheme === 'light' ? '#4a9eff' : 'rgba(255,255,255,0.08)'};
+                                       border-radius:4px; background:${currentTheme === 'light' ? 'rgba(74,158,255,0.15)' : 'transparent'};
+                                       color:${currentTheme === 'light' ? '#4a9eff' : '#888'}; cursor:pointer; font-size:11px;">
+                            ☀️ Light
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Хелперы -->
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                    <span style="color:#aaa; font-size:11px;">Show Grid</span>
+                    <button onclick="window.editor.settingsUI.toggleGrid()"
+                            style="padding:4px 12px; border:1px solid ${showGrid ? 'rgba(74,158,255,0.3)' : 'rgba(255,255,255,0.08)'};
+                                   border-radius:4px; background:${showGrid ? 'rgba(74,158,255,0.15)' : 'transparent'};
+                                   color:${showGrid ? '#4a9eff' : '#888'}; cursor:pointer; font-size:11px;">
+                        ${showGrid ? '✅ On' : '❌ Off'}
+                    </button>
+                </div>
+
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                    <span style="color:#aaa; font-size:11px;">Show Axes</span>
+                    <button onclick="window.editor.settingsUI.toggleAxes()"
+                            style="padding:4px 12px; border:1px solid ${showAxes ? 'rgba(74,158,255,0.3)' : 'rgba(255,255,255,0.08)'};
+                                   border-radius:4px; background:${showAxes ? 'rgba(74,158,255,0.15)' : 'transparent'};
+                                   color:${showAxes ? '#4a9eff' : '#888'}; cursor:pointer; font-size:11px;">
+                        ${showAxes ? '✅ On' : '❌ Off'}
+                    </button>
+                </div>
+
+                <!-- Размер хелперов -->
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                    <span style="color:#aaa; font-size:11px;">Helper Size</span>
+                    <div style="display:flex; gap:4px;">
+                        <button onclick="window.editor.settingsUI.setHelperSize('small')"
+                                style="padding:4px 10px; border:1px solid ${helperSize === 'small' ? '#4a9eff' : 'rgba(255,255,255,0.08)'};
+                                       border-radius:4px; background:${helperSize === 'small' ? 'rgba(74,158,255,0.15)' : 'transparent'};
+                                       color:${helperSize === 'small' ? '#4a9eff' : '#888'}; cursor:pointer; font-size:10px;">
+                            Small
+                        </button>
+                        <button onclick="window.editor.settingsUI.setHelperSize('medium')"
+                                style="padding:4px 10px; border:1px solid ${helperSize === 'medium' ? '#4a9eff' : 'rgba(255,255,255,0.08)'};
+                                       border-radius:4px; background:${helperSize === 'medium' ? 'rgba(74,158,255,0.15)' : 'transparent'};
+                                       color:${helperSize === 'medium' ? '#4a9eff' : '#888'}; cursor:pointer; font-size:10px;">
+                            Medium
+                        </button>
+                        <button onclick="window.editor.settingsUI.setHelperSize('large')"
+                                style="padding:4px 10px; border:1px solid ${helperSize === 'large' ? '#4a9eff' : 'rgba(255,255,255,0.08)'};
+                                       border-radius:4px; background:${helperSize === 'large' ? 'rgba(74,158,255,0.15)' : 'transparent'};
+                                       color:${helperSize === 'large' ? '#4a9eff' : '#888'}; cursor:pointer; font-size:10px;">
+                            Large
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Масштаб UI -->
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="color:#aaa; font-size:11px;">UI Scale</span>
+                    <div style="display:flex; gap:4px;">
+                        <button onclick="window.editor.settingsUI.setUIScale(1)"
+                                style="padding:4px 10px; border:1px solid ${uiScale === 1 ? '#4a9eff' : 'rgba(255,255,255,0.08)'};
+                                       border-radius:4px; background:${uiScale === 1 ? 'rgba(74,158,255,0.15)' : 'transparent'};
+                                       color:${uiScale === 1 ? '#4a9eff' : '#888'}; cursor:pointer; font-size:10px;">
+                            1x
+                        </button>
+                        <button onclick="window.editor.settingsUI.setUIScale(1.5)"
+                                style="padding:4px 10px; border:1px solid ${uiScale === 1.5 ? '#4a9eff' : 'rgba(255,255,255,0.08)'};
+                                       border-radius:4px; background:${uiScale === 1.5 ? 'rgba(74,158,255,0.15)' : 'transparent'};
+                                       color:${uiScale === 1.5 ? '#4a9eff' : '#888'}; cursor:pointer; font-size:10px;">
+                            1.5x
+                        </button>
+                        <button onclick="window.editor.settingsUI.setUIScale(2)"
+                                style="padding:4px 10px; border:1px solid ${uiScale === 2 ? '#4a9eff' : 'rgba(255,255,255,0.08)'};
+                                       border-radius:4px; background:${uiScale === 2 ? 'rgba(74,158,255,0.15)' : 'transparent'};
+                                       color:${uiScale === 2 ? '#4a9eff' : '#888'}; cursor:pointer; font-size:10px;">
+                            2x
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 📷 НАСТРОЙКИ КАМЕРЫ -->
             <div style="margin-bottom:16px; padding:12px; background:rgba(255,255,255,0.03); border-radius:6px;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
                     <span style="color:#888; font-size:12px;">📷 Camera Settings</span>
@@ -139,7 +241,7 @@ export class SettingsUI {
                 </div>
             </div>
 
-            <!-- Блок спавна -->
+            <!-- 📍 НАСТРОЙКИ СПАВНА -->
             <div style="margin-bottom:16px; padding:12px; background:rgba(255,255,255,0.03); border-radius:6px;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
                     <span style="color:#888; font-size:12px;">${this.createIconHTML(ICONS.marker, 14)} Spawn Mode</span>
@@ -155,7 +257,7 @@ export class SettingsUI {
                 </div>
             </div>
 
-            <!-- Блок панелей -->
+            <!-- 📐 НАСТРОЙКИ ПАНЕЛЕЙ -->
             <div style="margin-bottom:12px;">
                 <div style="color:#888; font-size:11px; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px;">
                     Panel Positions
@@ -212,7 +314,7 @@ export class SettingsUI {
         this.element.innerHTML = html;
     }
 
-    // 🔥 НОВЫЙ МЕТОД: переключение ограничения камеры
+    // переключение ограничения камеры
     toggleCameraFloorLimit() {
         const cameraService = this.editor.cameraService;
         if (!cameraService) return;
@@ -220,14 +322,12 @@ export class SettingsUI {
         const current = cameraService.getAllowBelowFloor();
         cameraService.setAllowBelowFloor(!current);
         
-        // Сохраняем настройку в localStorage
         try {
             localStorage.setItem('editor_camera_allow_below_floor', JSON.stringify(!current));
         } catch (e) {
             // Ignore
         }
         
-        // Обновляем UI
         this.render();
         console.log(`📷 Camera floor limit toggled: ${!current ? 'OFF (can go below)' : 'ON (constrained)'}`);
     }
@@ -240,5 +340,88 @@ export class SettingsUI {
             'spawn': '➕',
         };
         return icons[name] || '📄';
+    }
+
+    // Методы управления настройками отображения
+    getCurrentTheme() {
+        return localStorage.getItem('editor_theme') || 'dark';
+    }
+
+    setTheme(theme) {
+        localStorage.setItem('editor_theme', theme);
+        this.applyTheme(theme);
+        this.render();
+    }
+
+    applyTheme(theme) {
+        const colors = theme === 'light' ? COLORS.light : COLORS.dark;
+        document.body.style.background = colors.background;
+        
+        document.querySelectorAll('.panel, [data-panel]').forEach(el => {
+            el.style.background = colors.surface;
+            el.style.borderColor = colors.border;
+        });
+        
+        if (this.editor.sceneManager) {
+            this.editor.sceneManager.updateGridColors(colors.grid);
+        }
+    }
+
+    getShowGrid() {
+        return localStorage.getItem('editor_show_grid') !== 'false';
+    }
+
+    toggleGrid() {
+        const current = this.getShowGrid();
+        localStorage.setItem('editor_show_grid', String(!current));
+        if (this.editor.sceneManager) {
+            this.editor.sceneManager.toggleGrid(!current);
+        }
+        this.render();
+    }
+
+    getShowAxes() {
+        return localStorage.getItem('editor_show_axes') !== 'false';
+    }
+
+    toggleAxes() {
+        const current = this.getShowAxes();
+        localStorage.setItem('editor_show_axes', String(!current));
+        if (this.editor.sceneManager) {
+            this.editor.sceneManager.toggleAxes(!current);
+        }
+        this.render();
+    }
+
+    getHelperSize() {
+        return localStorage.getItem('editor_helper_size') || 'medium';
+    }
+
+    setHelperSize(size) {
+        localStorage.setItem('editor_helper_size', size);
+        if (this.editor.sceneManager) {
+            this.editor.sceneManager.setHelperSize(size);
+        }
+        this.render();
+    }
+
+    getUIScale() {
+        return parseFloat(localStorage.getItem('editor_ui_scale') || '1');
+    }
+
+    setUIScale(scale) {
+        localStorage.setItem('editor_ui_scale', String(scale));
+        this.applyUIScale(scale);
+        this.render();
+    }
+
+    applyUIScale(scale) {
+        const root = document.documentElement;
+        root.style.setProperty('--ui-scale', scale);
+        
+        document.querySelectorAll('.panel, [data-panel]').forEach(el => {
+            el.style.transform = `scale(${scale})`;
+            el.style.transformOrigin = 'top left';
+        });
     }
 }

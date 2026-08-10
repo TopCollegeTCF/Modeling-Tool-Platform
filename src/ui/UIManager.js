@@ -1,3 +1,4 @@
+import { ProjectUI } from './ProjectUI.js';
 import { ToolbarUI } from './ToolbarUI.js';
 import { PropertiesUI } from './PropertiesUI.js';
 import { SceneTreeUI } from './SceneTreeUI.js';
@@ -13,6 +14,9 @@ export class UIManager {
         this.spawn = new SpawnUI(editor);
         this.settings = new SettingsUI(editor);
         this.uiElements = [];
+
+        this.project = new ProjectUI(editor);
+        this.editor.projectUI = this.project;
     }
 
     init() {
@@ -49,6 +53,7 @@ export class UIManager {
             });
         }
         
+        this.project.init();
         console.log('✅ UI initialized');
     }
 

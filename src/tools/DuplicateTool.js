@@ -118,6 +118,9 @@ export class DuplicateTool extends Tool {
         this.editor.selectionManager.select(clone);
         this.editor.uiManager.updateUI();
         
+        // запись
+        this.editor.historyManager.push('duplicate');
+
         console.log(`📋 Duplicated: ${source.userData.name} → ${clone.userData.name}`);
     }
 }

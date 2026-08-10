@@ -43,10 +43,38 @@ export class ToolbarUI {
         // Кнопка настроек (только одна!)
         const settingsBtn = this.createSettingsButton();
         this.element.appendChild(settingsBtn);
+
+        // В методе init() после кнопки Settings
+
+        // Кнопка Project Manager
+        const projectBtn = this.createActionButton('📁', 'Project Manager', () => {
+            this.editor.projectUI.open();
+        });
+        this.element.appendChild(projectBtn);
         
         // Кнопка удаления
         const deleteBtn = this.createDeleteButton();
         this.element.appendChild(deleteBtn);
+
+        // Разделитель
+        const divider2 = document.createElement('div');
+        divider2.style.cssText = `
+            border-top: 1px solid rgba(255,255,255,0.08);
+            margin: 3px 0;
+        `;
+        this.element.appendChild(divider2);
+
+        // Кнопка Undo
+        const undoBtn = this.createActionButton('↩️', 'Undo (Ctrl+Z)', () => {
+            this.editor.undo();
+        });
+        this.element.appendChild(undoBtn);
+
+        // Кнопка Redo
+        const redoBtn = this.createActionButton('↪️', 'Redo (Ctrl+Y)', () => {
+            this.editor.redo();
+        });
+        this.element.appendChild(redoBtn);
         
         document.body.appendChild(this.element);
         this.updateActiveTool('select');
@@ -198,6 +226,35 @@ export class ToolbarUI {
             this.editor.deleteSelected();
         });
         
+        return btn;
+    }
+
+    // Вспомогательный метод для создания кнопок действий
+    createActionButton(icon, title, onClick) {
+        const btn = document.createElement('button');
+        btn.title = title;
+        btn.style.cssText = `
+            width: 32px;
+            height: 32px;
+            border: none;
+            border-radius: 6px;
+            background: transparent;
+            color: #888;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        `;
+        btn.textContent = icon;
+        btn.addEventListener('mouseenter', () => {
+            btn.style.background = 'rgba(255,255,255,0.08)';
+        });
+        btn.addEventListener('mouseleave', () => {
+            btn.style.background = 'transparent';
+        });
+        btn.addEventListener('click', onClick);
         return btn;
     }
     

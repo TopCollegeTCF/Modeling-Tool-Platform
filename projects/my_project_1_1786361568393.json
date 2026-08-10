@@ -1,0 +1,89 @@
+{
+  "version": "1.0",
+  "createdAt": "2026-08-10T11:32:48.391Z",
+  "history": [
+    {
+      "timestamp": 1786361483000,
+      "action": "initial",
+      "objects": [
+        {
+          "id": 1,
+          "name": "Cube",
+          "type": "cube",
+          "position": {
+            "x": 0,
+            "y": 0.5,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "color": 4890367,
+          "opacity": 1,
+          "transparent": false
+        }
+      ]
+    },
+    {
+      "timestamp": 1786361533996,
+      "action": "add sphere",
+      "objects": [
+        {
+          "id": 1,
+          "name": "Cube",
+          "type": "cube",
+          "position": {
+            "x": 2.517557092784835,
+            "y": 0.5,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "color": 4890367,
+          "opacity": 1,
+          "transparent": false
+        },
+        {
+          "id": 2,
+          "name": "Sphere",
+          "type": "sphere",
+          "position": {
+            "x": 1.5,
+            "y": 0.5,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "color": 16739179,
+          "opacity": 1,
+          "transparent": false
+        }
+      ]
+    }
+  ],
+  "currentIndex": 1,
+  "maxSteps": 50
+}

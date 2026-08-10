@@ -9,10 +9,9 @@ export class SettingsUI {
         this.overlay = null;
         this.isOpen = false;
     }
-    
+
     init() {
         // Кнопка создается в ToolbarUI, не дублируем!
-        
         this.element = createElement('div', {
             id: 'settings-panel',
             styles: `
@@ -34,7 +33,7 @@ export class SettingsUI {
                 display: none;
             `,
         });
-        
+
         this.overlay = createElement('div', {
             id: 'settings-overlay',
             styles: `
@@ -52,45 +51,46 @@ export class SettingsUI {
                 click: () => this.close(),
             },
         });
-        
+
         document.body.appendChild(this.overlay);
         document.body.appendChild(this.element);
-        
+
+        // Сохраняем ссылку на себя в редакторе
         this.editor.settingsUI = this;
-        
+
         console.log('✅ SettingsUI initialized');
     }
-    
+
     toggle() {
         this.isOpen ? this.close() : this.open();
     }
-    
+
     open() {
         this.isOpen = true;
         this.element.style.display = 'block';
         this.overlay.style.display = 'block';
         this.render();
     }
-    
+
     close() {
         this.isOpen = false;
         this.element.style.display = 'none';
         this.overlay.style.display = 'none';
     }
-    
+
     createIconHTML(iconPath, size = 16) {
         return `<img src="${iconPath}" style="width:${size}px; height:${size}px; filter: invert(0.5); vertical-align: middle;" onerror="this.style.display='none'">`;
     }
-    
+
     render() {
         if (!this.element) return;
-        
+
         const panelService = this.editor.panelService;
         if (!panelService) {
             this.element.innerHTML = `
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
                     <h2 style="color:#fff; font-weight:400; font-size:18px; margin:0;">${this.createIconHTML(ICONS.settings, 20)} Settings</h2>
-                    <button onclick="window.editor.settingsUI.close()" 
+                    <button onclick="window.editor.settingsUI.close()"
                             style="background:transparent; border:none; color:#666; font-size:20px; cursor:pointer; padding:4px 8px;">
                         ✕
                     </button>
@@ -101,26 +101,51 @@ export class SettingsUI {
             `;
             return;
         }
-        
+
         const positions = panelService.getAvailablePositions();
         const spawnService = this.editor.spawnService;
         const mode = spawnService ? spawnService.getMode() : 'center';
         
+        // 🔥 НОВОЕ: получаем состояние ограничения камеры
+        const cameraService = this.editor.cameraService;
+        const allowBelowFloor = cameraService ? cameraService.getAllowBelowFloor() : false;
+
         let html = `
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
                 <h2 style="color:#fff; font-weight:400; font-size:18px; margin:0;">${this.createIconHTML(ICONS.settings, 20)} Settings</h2>
-                <button onclick="window.editor.settingsUI.close()" 
+                <button onclick="window.editor.settingsUI.close()"
                         style="background:transparent; border:none; color:#666; font-size:20px; cursor:pointer; padding:4px 8px;">
                     ✕
                 </button>
             </div>
-            
+
+            <!-- 🔥 НОВЫЙ БЛОК: Настройки камеры -->
+            <div style="margin-bottom:16px; padding:12px; background:rgba(255,255,255,0.03); border-radius:6px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                    <span style="color:#888; font-size:12px;">📷 Camera Settings</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:4px 0;">
+                    <span style="color:#aaa; font-size:11px;">Allow camera below floor</span>
+                    <button onclick="window.editor.settingsUI.toggleCameraFloorLimit()"
+                            style="padding:4px 12px; border:1px solid ${allowBelowFloor ? 'rgba(255,212,59,0.3)' : 'rgba(255,255,255,0.08)'};
+                                   border-radius:4px; background:${allowBelowFloor ? 'rgba(255,212,59,0.15)' : 'transparent'};
+                                   color:${allowBelowFloor ? '#ffd43b' : '#888'}; cursor:pointer; font-size:11px;
+                                   transition:all 0.2s;">
+                        ${allowBelowFloor ? '✅ Unlimited' : '🔒 Limited'}
+                    </button>
+                </div>
+                <div style="font-size:10px; color:#555; margin-top:4px;">
+                    ${allowBelowFloor ? 'Camera can move below floor level (Y < 1)' : 'Camera is constrained above floor level (Y ≥ 1)'}
+                </div>
+            </div>
+
+            <!-- Блок спавна -->
             <div style="margin-bottom:16px; padding:12px; background:rgba(255,255,255,0.03); border-radius:6px;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
                     <span style="color:#888; font-size:12px;">${this.createIconHTML(ICONS.marker, 14)} Spawn Mode</span>
-                    <button onclick="window.editor.toggleSpawnMode(); window.editor.settingsUI.render();" 
-                            style="padding:4px 12px; border:1px solid ${mode === 'marker' ? '#ffd43b' : 'rgba(255,255,255,0.08)'}; 
-                                   border-radius:4px; background:${mode === 'marker' ? 'rgba(255,212,59,0.15)' : 'transparent'}; 
+                    <button onclick="window.editor.toggleSpawnMode(); window.editor.settingsUI.render();"
+                            style="padding:4px 12px; border:1px solid ${mode === 'marker' ? '#ffd43b' : 'rgba(255,255,255,0.08)'};
+                                   border-radius:4px; background:${mode === 'marker' ? 'rgba(255,212,59,0.15)' : 'transparent'};
                                    color:${mode === 'marker' ? '#ffd43b' : '#888'}; cursor:pointer; font-size:11px;">
                         ${mode === 'marker' ? '📍 Marker' : '🎯 Center'}
                     </button>
@@ -129,13 +154,14 @@ export class SettingsUI {
                     ${mode === 'marker' ? 'Objects spawn at marker position' : 'Objects spawn in sequence'}
                 </div>
             </div>
-            
+
+            <!-- Блок панелей -->
             <div style="margin-bottom:12px;">
                 <div style="color:#888; font-size:11px; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px;">
                     Panel Positions
                 </div>
         `;
-        
+
         ALL_PANELS.forEach(name => {
             const currentPos = panelService.getPanelPosition(name);
             const isVisible = panelService.getPanelVisibility(name);
@@ -148,8 +174,8 @@ export class SettingsUI {
                         <span style="color:#aaa; font-size:12px;">${icon} ${title}</span>
                         <div style="display:flex; gap:4px; align-items:center;">
                             <button onclick="window.editor.panelService.togglePanel('${name}'); window.editor.settingsUI.render();"
-                                    style="padding:2px 8px; border:1px solid ${isVisible ? 'rgba(74,158,255,0.3)' : 'rgba(255,255,255,0.08)'}; 
-                                           border-radius:3px; background:${isVisible ? 'rgba(74,158,255,0.15)' : 'transparent'}; 
+                                    style="padding:2px 8px; border:1px solid ${isVisible ? 'rgba(74,158,255,0.3)' : 'rgba(255,255,255,0.08)'};
+                                           border-radius:3px; background:${isVisible ? 'rgba(74,158,255,0.15)' : 'transparent'};
                                            color:${isVisible ? '#4a9eff' : '#555'}; cursor:pointer; font-size:9px;">
                                 ${isVisible ? '👁 Visible' : '🔒 Hidden'}
                             </button>
@@ -160,8 +186,8 @@ export class SettingsUI {
                             const isActive = pos === currentPos;
                             return `
                                 <button onclick="window.editor.panelService.setPanelPosition('${name}', '${pos}'); window.editor.settingsUI.render();"
-                                        style="padding:2px 4px; border:1px solid ${isActive ? '#4a9eff' : 'rgba(255,255,255,0.06)'}; 
-                                               border-radius:2px; background:${isActive ? 'rgba(74,158,255,0.15)' : 'transparent'}; 
+                                        style="padding:2px 4px; border:1px solid ${isActive ? '#4a9eff' : 'rgba(255,255,255,0.06)'};
+                                               border-radius:2px; background:${isActive ? 'rgba(74,158,255,0.15)' : 'transparent'};
                                                color:${isActive ? '#4a9eff' : '#555'}; cursor:pointer; font-size:8px;
                                                transition:all 0.2s;">
                                     ${panelService.getPositionLabel(pos)}
@@ -172,21 +198,40 @@ export class SettingsUI {
                 </div>
             `;
         });
-        
+
         html += `
             </div>
-            
             <button onclick="window.editor.panelService.reset(); window.editor.settingsUI.render();"
-                    style="width:100%; padding:8px; border:1px solid rgba(255,80,80,0.2); 
-                           border-radius:4px; background:rgba(255,80,80,0.1); color:#ff6b6b; 
+                    style="width:100%; padding:8px; border:1px solid rgba(255,80,80,0.2);
+                           border-radius:4px; background:rgba(255,80,80,0.1); color:#ff6b6b;
                            cursor:pointer; font-size:11px; transition:all 0.2s;">
                 🔄 Reset All Panel Settings
             </button>
         `;
-        
+
         this.element.innerHTML = html;
     }
-    
+
+    // 🔥 НОВЫЙ МЕТОД: переключение ограничения камеры
+    toggleCameraFloorLimit() {
+        const cameraService = this.editor.cameraService;
+        if (!cameraService) return;
+
+        const current = cameraService.getAllowBelowFloor();
+        cameraService.setAllowBelowFloor(!current);
+        
+        // Сохраняем настройку в localStorage
+        try {
+            localStorage.setItem('editor_camera_allow_below_floor', JSON.stringify(!current));
+        } catch (e) {
+            // Ignore
+        }
+        
+        // Обновляем UI
+        this.render();
+        console.log(`📷 Camera floor limit toggled: ${!current ? 'OFF (can go below)' : 'ON (constrained)'}`);
+    }
+
     getPanelIcon(name) {
         const icons = {
             'properties': '📐',

@@ -24,6 +24,7 @@ export const CAMERA_CONFIG = {
         maxDistance: 20,
         minY: 1,
         maxY: 15,
+        allowBelowFloor: false, // false - камера не опускается ниже пола, true - можно
     },
     
     // Орбитальные настройки

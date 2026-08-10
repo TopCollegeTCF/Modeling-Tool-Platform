@@ -15,6 +15,7 @@ import { StorageManager } from '../storage/StorageManager.js';
 import { Cube } from '../entities/Cube.js';
 import { Sphere } from '../entities/Sphere.js';
 import { Cylinder } from '../entities/Cylinder.js';
+import { HistoryManager } from './HistoryManager.js';
 
 export class Editor {
     constructor() {
@@ -26,6 +27,7 @@ export class Editor {
         this.eventManager = new EventManager();
         this.toolManager = new ToolManager(this);
         this.uiManager = new UIManager(this);
+        this.historyManager = new HistoryManager(this, 50);
         
         // Services
         this.cameraService = null;
@@ -50,6 +52,10 @@ export class Editor {
         
         this.isRunning = true;
         this.animate();
+
+        setTimeout(() => {
+            this.historyManager.saveInitialState();
+        }, 200);
     }
     
     initScene() {
@@ -182,6 +188,21 @@ export class Editor {
             if (event.key === 'Delete' || event.key === 'Backspace') {
                 this.deleteSelected();
             }
+            // Undo/Redo
+            if (event.ctrlKey && event.key === 'z') {
+                event.preventDefault();
+                this.undo();
+            }
+            if (event.ctrlKey && event.key === 'y') {
+                event.preventDefault();
+                this.redo();
+            }
+            // быстрая смена ограничения камеры (Ctrl+Shift+F)
+            if (event.ctrlKey && event.shiftKey && event.key === 'F') {
+                event.preventDefault();
+                this.toggleCameraFloorLimit();
+            }
+
             if (event.key === '1') this.toolManager.switchTool('select');
             if (event.key === '2') this.toolManager.switchTool('move');
             if (event.key === '3') this.toolManager.switchTool('scale');
@@ -231,6 +252,7 @@ export class Editor {
         return null;
     }
     
+    // обертка для всех действий с записью в историю
     addCube(options = {}) {
         this.entityIdCounter++;
         const cube = new Cube(1, 1, 1, options);
@@ -240,6 +262,10 @@ export class Editor {
         this.sceneManager.addEntity(cube);
         this.selectionManager.select(cube);
         this.uiManager.updateUI();
+        
+        // запись
+        this.historyManager.push('add cube');
+        
         console.log(`✅ Cube created (id: ${this.entityIdCounter})`);
         return cube;
     }
@@ -253,6 +279,10 @@ export class Editor {
         this.sceneManager.addEntity(sphere);
         this.selectionManager.select(sphere);
         this.uiManager.updateUI();
+        
+        // запись
+        this.historyManager.push('add sphere');
+        
         console.log(`✅ Sphere created (id: ${this.entityIdCounter})`);
         return sphere;
     }
@@ -266,6 +296,10 @@ export class Editor {
         this.sceneManager.addEntity(cylinder);
         this.selectionManager.select(cylinder);
         this.uiManager.updateUI();
+        
+        // запись
+        this.historyManager.push('add cylinder');
+        
         console.log(`✅ Cylinder created (id: ${this.entityIdCounter})`);
         return cylinder;
     }
@@ -276,6 +310,42 @@ export class Editor {
             this.sceneManager.removeEntity(entity);
             this.selectionManager.clear();
             this.uiManager.updateUI();
+            
+            // запись
+            this.historyManager.push('delete');
+        }
+    }
+
+    // МЕТОДЫ ДЛЯ UNDO/REDO
+    undo() {
+        this.historyManager.undo();
+    }
+
+    redo() {
+        this.historyManager.redo();
+    }
+
+    // Сериализация всей сцены для сохранения
+    exportScene() {
+        return this.historyManager.exportHistory();
+    }
+
+    // Десериализация сцены из сохраненного файла
+    importScene(data) {
+        this.historyManager.importHistory(data);
+    }
+
+    // переключение ограничения камеры
+    toggleCameraFloorLimit() {
+        if (this.cameraService) {
+            this.cameraService.setAllowBelowFloor(!this.cameraService.getAllowBelowFloor());
+            
+            // Обновляем UI настроек, если они открыты
+            if (this.settingsUI && this.settingsUI.isOpen) {
+                this.settingsUI.render();
+            }
+            
+            console.log(`📷 Camera floor limit toggled via hotkey`);
         }
     }
     

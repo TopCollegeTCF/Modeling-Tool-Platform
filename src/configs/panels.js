@@ -52,6 +52,25 @@ export const PANEL_POSITION_STYLES = {
     },
 };
 
+// Визуальные индикаторы позиций для настроек
+export const PANEL_POSITION_ICONS = {
+    [PANEL_POSITIONS.TOP_LEFT]: '↖',
+    [PANEL_POSITIONS.TOP_CENTER]: '↑',
+    [PANEL_POSITIONS.TOP_RIGHT]: '↗',
+    [PANEL_POSITIONS.MIDDLE_LEFT]: '←',
+    [PANEL_POSITIONS.MIDDLE_RIGHT]: '→',
+    [PANEL_POSITIONS.BOTTOM_LEFT]: '↙',
+    [PANEL_POSITIONS.BOTTOM_CENTER]: '↓',
+    [PANEL_POSITIONS.BOTTOM_RIGHT]: '↘',
+};
+
+// Визуальное представление сетки позиций
+export const PANEL_POSITION_GRID = [
+    ['top-left', 'top-center', 'top-right'],
+    ['middle-left', 'center', 'middle-right'],
+    ['bottom-left', 'bottom-center', 'bottom-right'],
+];
+
 // Дефолтные позиции панелей
 export const PANEL_DEFAULTS = {
     properties: {
@@ -71,6 +90,8 @@ export const PANEL_DEFAULTS = {
         visible: true,
         title: 'Tools',
         icon: '🔧',
+        // tools панель не может быть в верхних позициях (конфликт с secondary toolbar)
+        restrictedPositions: ['top-left', 'top-center', 'top-right'],
     },
     spawn: {
         position: PANEL_POSITIONS.BOTTOM_LEFT,
@@ -89,3 +110,8 @@ export const PANEL_NAMES = {
 
 // Все доступные панели
 export const ALL_PANELS = ['properties', 'sceneTree', 'tools', 'spawn'];
+
+// Панели, которые не могут занимать верхние позиции
+export const PANEL_RESTRICTIONS = {
+    tools: ['top-left', 'top-center', 'top-right'],
+};

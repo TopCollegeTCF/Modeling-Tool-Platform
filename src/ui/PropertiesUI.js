@@ -19,22 +19,31 @@ export class PropertiesUI {
             z-index: 1000;
             background: rgba(16, 16, 32, 0.95);
             backdrop-filter: blur(10px);
-            padding: 12px;
+            padding: 14px 16px;
             border-radius: 10px;
             border: 1px solid rgba(255,255,255,0.08);
-            min-width: 180px;
-            max-width: 220px;
-            max-height: calc(100vh - 24px);
+            min-width: 240px;
+            max-width: 280px;
+            width: 260px;
+            min-height: 320px;
+            max-height: calc(100vh - 120px);
             overflow-y: auto;
             overflow-x: hidden;
             transition: all 0.3s ease;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
         `;
         this.element.setAttribute('data-panel', 'properties');
-        this.element.style.cssText += `
-            &::-webkit-scrollbar { width: 3px; }
-            &::-webkit-scrollbar-track { background: transparent; }
-            &::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 2px; }
+        
+        // Стили для скролла
+        const style = document.createElement('style');
+        style.textContent = `
+            #properties::-webkit-scrollbar { width: 3px; }
+            #properties::-webkit-scrollbar-track { background: transparent; }
+            #properties::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 2px; }
+            #properties::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.25); }
         `;
+        this.element.appendChild(style);
+        
         document.body.appendChild(this.element);
         this.applyTheme(this.currentTheme);
         this.update();
@@ -69,27 +78,27 @@ export class PropertiesUI {
 
         const inputStyle = `
             width:100%;
-            padding:2px 5px;
+            padding:3px 6px;
             background:${colors.input.background};
             border:1px solid ${colors.input.border};
-            border-radius:2px;
+            border-radius:3px;
             color:${colors.input.color};
-            font-size:10px;
+            font-size:11px;
             box-sizing:border-box;
             transition: all 0.3s ease;
         `;
         const labelStyle = `
             color:${colors.input.label};
-            font-size:8px;
+            font-size:9px;
             display:block;
-            margin-bottom:1px;
+            margin-bottom:2px;
             text-transform:uppercase;
             letter-spacing:0.5px;
         `;
 
         let html = renderTemplate(UI_TEMPLATES.properties.header, {
-            icon: this.createIconHTML(ICONS.cube, 12),
-            deleteIcon: this.createIconHTML(ICONS.delete, 14),
+            icon: this.createIconHTML(ICONS.cube, 14),
+            deleteIcon: this.createIconHTML(ICONS.delete, 16),
             labelColor: colors.input.label,
         });
 
@@ -122,7 +131,7 @@ export class PropertiesUI {
             labelStyle: labelStyle,
         });
 
-        // Appearance
+        // Appearance - увеличенный блок
         html += renderTemplate(UI_TEMPLATES.properties.appearance, {
             surfaceLight: colors.surfaceLight,
             borderColor: colors.input.border,
@@ -133,7 +142,7 @@ export class PropertiesUI {
             opacityPercent: Math.round(opacity * 100),
         });
 
-        // Transform inputs helper
+        // Transform inputs с увеличенными полями
         const renderTransform = (prop, values, step, extra = '') => {
             const inputs = ['x', 'y', 'z'].map(axis => {
                 const val = values[axis] !== undefined ? values[axis] : 0;

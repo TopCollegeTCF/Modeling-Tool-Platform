@@ -1,23 +1,13 @@
 /**
  * ⚙️ SettingsUI - Панель настроек приложения
  *
- * 📋 ОПИСАНИЕ:
- * Предоставляет интерфейс для настройки различных параметров приложения:
- * - Тема оформления (темная/светлая)
- * - Отображение хелперов (сетка, оси, размер, толщина)
- * - Масштаб интерфейса
- * - Настройки камеры
- * - Режим спавна
- * - Видимость дополнительных кнопок
- * - Позиции и видимость панелей с визуальной сеткой
- *
- * @version 1.0.6
+ * @version 1.0.7
  * @author Gabryelf
  * @since 0.1.0
  */
  import { TEMPLATES, createElement, applyStyles } from '../configs/templates.js';
  import { ICONS } from '../configs/icons.js';
- import { PANEL_NAMES, ALL_PANELS } from '../configs/panels.js';
+ import { PANEL_NAMES, ALL_PANELS, PANEL_RESTRICTIONS } from '../configs/panels.js';
  import { COLORS } from '../configs/colors.js';
  import { UI_TEMPLATES, renderTemplate } from '../configs/ui-templates.js';
  
@@ -64,7 +54,7 @@
                  border: 1px solid rgba(255,255,255,0.1);
                  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
                  min-width: 360px;
-                 max-width: 480px;
+                 max-width: 500px;
                  max-height: 80vh;
                  overflow-y: auto;
                  display: none;
@@ -124,9 +114,17 @@
          const restrictions = panelService.getRestrictedPositions(panelName) || [];
          const panelIcon = this.getPanelIcon(panelName);
  
+         // Получаем имена панелей с их позициями для отображения
+         const occupiedMap = new Map();
+         for (const [name, pos] of occupied) {
+             if (name !== panelName) {
+                 occupiedMap.set(pos, name);
+             }
+         }
+ 
          let html = `
              <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px;
-                         max-width: 160px; margin: 4px auto; background: rgba(255,255,255,0.02);
+                         max-width: 180px; margin: 4px auto; background: rgba(255,255,255,0.02);
                          padding: 4px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.05);">
          `;
  
@@ -134,15 +132,16 @@
              for (const pos of row) {
                  const isCurrent = pos === currentPos;
                  const isRestricted = restrictions.includes(pos);
-                 const occupant = this.findOccupant(pos, panelName, occupied);
+                 const occupant = occupiedMap.get(pos);
                  const posIcon = panelService.getPositionIcon(pos) || '•';
                  const isCenter = pos === 'center';
  
-                 let bgColor = 'rgba(255,255,255,0.03)';
-                 let borderColor = 'rgba(255,255,255,0.06)';
+                 let bgColor = 'rgba(255,255,255,0.02)';
+                 let borderColor = 'rgba(255,255,255,0.05)';
                  let label = '';
                  let labelColor = '#444';
                  let tooltip = '';
+                 let isClickable = false;
  
                  if (isCurrent) {
                      bgColor = 'rgba(74,158,255,0.25)';
@@ -152,11 +151,12 @@
                      tooltip = 'Current position';
                  } else if (occupant) {
                      const occIcon = this.getPanelIcon(occupant);
+                     const occName = PANEL_NAMES[occupant] || occupant;
                      bgColor = 'rgba(81,207,102,0.12)';
-                     borderColor = 'rgba(81,207,102,0.4)';
+                     borderColor = 'rgba(81,207,102,0.3)';
                      label = occIcon;
                      labelColor = '#51cf66';
-                     tooltip = `Occupied by ${occupant}`;
+                     tooltip = `Occupied by ${occName}`;
                  } else if (isRestricted) {
                      bgColor = 'rgba(255,80,80,0.05)';
                      borderColor = 'rgba(255,80,80,0.15)';
@@ -169,10 +169,9 @@
                      label = '○';
                      labelColor = '#333';
                      tooltip = 'Click to move here';
+                     isClickable = true;
                  }
  
-                 const isClickable = !isCurrent && !occupant && !isRestricted;
-                 const cursor = isClickable ? 'pointer' : 'default';
                  const clickHandler = isClickable 
                      ? `window.editor.panelService.setPanelPosition('${panelName}', '${pos}'); window.editor.settingsUI.render();`
                      : '';
@@ -181,18 +180,22 @@
                      <div onclick="${clickHandler}"
                           title="${tooltip}"
                           style="padding: 6px 2px; border: 2px solid ${borderColor}; border-radius: 4px;
-                                 background: ${bgColor}; text-align: center; cursor: ${cursor};
+                                 background: ${bgColor}; text-align: center; 
+                                 cursor: ${isClickable ? 'pointer' : 'default'};
                                  transition: all 0.2s ease; user-select: none;
                                  ${isCurrent ? 'box-shadow: 0 0 12px rgba(74,158,255,0.15);' : ''}
                                  ${isClickable ? 'hover: background: rgba(255,255,255,0.08);' : ''}
                                  display: flex; flex-direction: column; align-items: center; justify-content: center;
-                                 min-height: 32px;">
-                         <div style="font-size: ${isCenter ? '14px' : '16px'}; line-height: 1.2;">
+                                 min-height: 36px; min-width: 40px;">
+                         <div style="font-size: ${isCenter ? '14px' : '18px'}; line-height: 1.2;">
                              ${isCenter ? '⊞' : posIcon}
                          </div>
-                         <div style="font-size: 10px; color: ${labelColor}; margin-top: 1px; font-weight: ${isCurrent ? '600' : '400'};">
+                         <div style="font-size: 10px; color: ${labelColor}; margin-top: 2px; 
+                                     font-weight: ${isCurrent ? '600' : '400'};
+                                     ${occupant ? 'background: rgba(81,207,102,0.1); padding: 0 4px; border-radius: 8px;' : ''}">
                              ${label}
                          </div>
+                         ${occupant ? `<div style="font-size: 7px; color: #51cf66; margin-top: 1px; opacity: 0.6;">${PANEL_NAMES[occupant] || occupant}</div>` : ''}
                      </div>
                  `;
              }
@@ -200,15 +203,6 @@
  
          html += '</div>';
          return html;
-     }
- 
-     findOccupant(position, excludePanel, occupied) {
-         for (const [name, pos] of occupied) {
-             if (name !== excludePanel && pos === position) {
-                 return name;
-             }
-         }
-         return null;
      }
  
      render() {
@@ -240,13 +234,12 @@
          const mode = spawnService ? spawnService.getMode() : 'center';
          const cameraService = this.editor.cameraService;
          const allowBelowFloor = cameraService ? cameraService.getAllowBelowFloor() : false;
-         const flyModeEnabled = cameraService ? cameraService.flyModeEnabled || false : false;
  
          let html = renderTemplate(UI_TEMPLATES.settings.header, {
              icon: this.createIconHTML(ICONS.settings, 20),
          });
  
-         // ==================== DISPLAY SECTION ====================
+         // Display Section
          let displayContent = '';
  
          displayContent += renderTemplate(UI_TEMPLATES.settings.displaySection.theme, {
@@ -289,7 +282,6 @@
              buttons: sizeButtons,
          });
  
-         // Thickness slider
          const currentThickness = this.getHelperThickness();
          displayContent += `
              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
@@ -322,7 +314,7 @@
              content: displayContent,
          });
  
-         // ==================== CAMERA SECTION ====================
+         // Camera Section
          html += renderTemplate(UI_TEMPLATES.settings.cameraSection, {
              border: allowBelowFloor ? 'rgba(255,212,59,0.3)' : 'rgba(255,255,255,0.08)',
              bg: allowBelowFloor ? 'rgba(255,212,59,0.15)' : 'transparent',
@@ -333,7 +325,7 @@
                  : 'Camera is constrained above floor level (Y ≥ 1)',
          });
  
-         // ==================== SPAWN SECTION ====================
+         // Spawn Section
          html += renderTemplate(UI_TEMPLATES.settings.spawnSection, {
              icon: this.createIconHTML(ICONS.marker, 14),
              border: mode === 'marker' ? '#ffd43b' : 'rgba(255,255,255,0.08)',
@@ -345,7 +337,7 @@
                  : 'Objects spawn in sequence',
          });
  
-         // ==================== SECONDARY TOOLBAR BUTTONS ====================
+         // Secondary Toolbar Buttons
          html += `
              <div style="margin-bottom: 16px; padding: 12px; background: rgba(255,255,255,0.03); border-radius: 6px;">
                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
@@ -358,7 +350,7 @@
              </div>
          `;
  
-         // ==================== PANELS SECTION ====================
+         // Panels Section
          let panelsHtml = '';
          ALL_PANELS.forEach(name => {
              const currentPos = panelService.getPanelPosition(name);
@@ -467,7 +459,7 @@
          `;
      }
  
-     // ==================== НАСТРОЙКИ ОТОБРАЖЕНИЯ ====================
+     // ==================== SETTINGS METHODS ====================
  
      getCurrentTheme() {
          return localStorage.getItem('editor_theme') || 'dark';
@@ -570,22 +562,14 @@
      applyUIScale(scale) {
          const root = document.documentElement;
          root.style.setProperty('--ui-scale', scale);
-         const vw = window.innerWidth;
-         const vh = window.innerHeight;
-         document.querySelectorAll('.panel, [data-panel]').forEach(el => {
-             const rect = el.getBoundingClientRect();
-             const originalWidth = rect.width;
-             const originalHeight = rect.height;
-             const maxScaleX = (vw * 0.9) / originalWidth;
-             const maxScaleY = (vh * 0.9) / originalHeight;
-             const finalScale = Math.min(scale, maxScaleX, maxScaleY);
-             el.style.transform = `scale(${finalScale})`;
-             el.style.transformOrigin = 'top left';
-             const offsetX = (originalWidth * (finalScale - 1)) / 2;
-             const offsetY = (originalHeight * (finalScale - 1)) / 2;
-             el.style.marginLeft = `-${offsetX}px`;
-             el.style.marginTop = `-${offsetY}px`;
-         });
+         
+         // Обновляем размеры всех панелей
+         const panelService = this.editor.panelService;
+         if (panelService) {
+             ALL_PANELS.forEach(name => {
+                 panelService.applyPosition(name);
+             });
+         }
      }
  
      toggleCameraFloorLimit() {

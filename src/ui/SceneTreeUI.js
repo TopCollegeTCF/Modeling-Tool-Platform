@@ -16,20 +16,29 @@ export class SceneTreeUI {
             z-index: 1000;
             background: rgba(16, 16, 32, 0.95);
             backdrop-filter: blur(10px);
-            padding: 12px;
+            padding: 12px 14px;
             border-radius: 10px;
             border: 1px solid rgba(255,255,255,0.08);
-            min-width: 150px;
-            max-width: 200px;
-            max-height: 200px;
+            min-width: 180px;
+            max-width: 220px;
+            width: 200px;
+            min-height: 280px;
+            max-height: 400px;
             overflow-y: auto;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
         `;
         this.element.setAttribute('data-panel', 'sceneTree');
-        this.element.style.cssText += `
-            &::-webkit-scrollbar { width: 3px; }
-            &::-webkit-scrollbar-track { background: transparent; }
-            &::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 2px; }
+        
+        // Стили для скролла
+        const style = document.createElement('style');
+        style.textContent = `
+            #scene-tree::-webkit-scrollbar { width: 3px; }
+            #scene-tree::-webkit-scrollbar-track { background: transparent; }
+            #scene-tree::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 2px; }
+            #scene-tree::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.25); }
         `;
+        this.element.appendChild(style);
+        
         document.body.appendChild(this.element);
         this.update();
         console.log('✅ SceneTreeUI initialized');

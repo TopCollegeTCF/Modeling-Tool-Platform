@@ -1,7 +1,6 @@
 import { Editor } from './core/Editor.js';
 
 console.log('🚀 Starting editor...');
-
 const editor = new Editor();
 window.editor = editor;
 
@@ -12,13 +11,13 @@ setTimeout(() => {
     if (editor.settingsUI) {
         editor.settingsUI.applyTheme(theme);
     }
-
+    
     // Масштаб UI
     const uiScale = parseFloat(localStorage.getItem('editor_ui_scale') || '1');
     if (editor.settingsUI) {
         editor.settingsUI.applyUIScale(uiScale);
     }
-
+    
     // Хелперы
     const showGrid = localStorage.getItem('editor_show_grid') !== 'false';
     const showAxes = localStorage.getItem('editor_show_axes') !== 'false';
@@ -26,12 +25,24 @@ setTimeout(() => {
         editor.sceneManager.toggleGrid(showGrid);
         editor.sceneManager.toggleAxes(showAxes);
     }
-
+    
     const helperSize = localStorage.getItem('editor_helper_size') || 'medium';
     if (editor.sceneManager) {
         editor.sceneManager.setHelperSize(helperSize);
     }
-
+    
+    const helperThickness = parseFloat(localStorage.getItem('editor_helper_thickness') || '1');
+    if (editor.sceneManager) {
+        editor.sceneManager.setHelperThickness(helperThickness);
+    }
+    
+    // Восстанавливаем позиции панелей
+    if (editor.panelService) {
+        setTimeout(() => {
+            editor.panelService.refreshAllPanels();
+        }, 50);
+    }
+    
     console.log('✅ Settings loaded from localStorage');
 }, 200);
 

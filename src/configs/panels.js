@@ -52,7 +52,6 @@ export const PANEL_POSITION_STYLES = {
     },
 };
 
-// Визуальные индикаторы позиций для настроек
 export const PANEL_POSITION_ICONS = {
     [PANEL_POSITIONS.TOP_LEFT]: '↖',
     [PANEL_POSITIONS.TOP_CENTER]: '↑',
@@ -64,33 +63,37 @@ export const PANEL_POSITION_ICONS = {
     [PANEL_POSITIONS.BOTTOM_RIGHT]: '↘',
 };
 
-// Визуальное представление сетки позиций
 export const PANEL_POSITION_GRID = [
     ['top-left', 'top-center', 'top-right'],
     ['middle-left', 'center', 'middle-right'],
     ['bottom-left', 'bottom-center', 'bottom-right'],
 ];
 
-// Дефолтные позиции панелей
+// Дефолтные позиции и размеры панелей
 export const PANEL_DEFAULTS = {
     properties: {
         position: PANEL_POSITIONS.TOP_RIGHT,
         visible: true,
         title: 'Properties',
         icon: '📐',
+        width: 240,
+        height: 380,
     },
     sceneTree: {
         position: PANEL_POSITIONS.BOTTOM_RIGHT,
         visible: true,
         title: 'Objects',
         icon: '📦',
+        width: 200,
+        height: 300,
     },
     tools: {
         position: PANEL_POSITIONS.MIDDLE_LEFT,
         visible: true,
         title: 'Tools',
         icon: '🔧',
-        // tools панель не может быть в верхних позициях (конфликт с secondary toolbar)
+        width: 50,
+        height: 280,
         restrictedPositions: ['top-left', 'top-center', 'top-right'],
     },
     spawn: {
@@ -98,6 +101,8 @@ export const PANEL_DEFAULTS = {
         visible: true,
         title: 'Create',
         icon: '➕',
+        width: 190,
+        height: 180,
     },
 };
 
@@ -108,10 +113,20 @@ export const PANEL_NAMES = {
     spawn: 'Create',
 };
 
-// Все доступные панели
 export const ALL_PANELS = ['properties', 'sceneTree', 'tools', 'spawn'];
 
-// Панели, которые не могут занимать верхние позиции
+// Ограничения для панелей (не могут занимать эти позиции)
 export const PANEL_RESTRICTIONS = {
     tools: ['top-left', 'top-center', 'top-right'],
+    properties: [], // Может быть где угодно
+    sceneTree: [], // Может быть где угодно
+    spawn: [], // Может быть где угодно
+};
+
+// Приоритеты панелей при конфликте позиций (чем выше число, тем выше приоритет)
+export const PANEL_PRIORITY = {
+    tools: 0, // Самый низкий приоритет - всегда уступает
+    properties: 1,
+    sceneTree: 1,
+    spawn: 1,
 };

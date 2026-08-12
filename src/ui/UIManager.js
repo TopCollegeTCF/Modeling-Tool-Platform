@@ -56,6 +56,13 @@ export class UIManager {
         }
 
         this.project.init();
+        
+        // Применяем сохраненные позиции панелей после загрузки
+        setTimeout(() => {
+            if (this.editor.panelService) {
+                this.editor.panelService.refreshAllPanels();
+            }
+        }, 100);
 
         console.log('✅ UI initialized');
     }

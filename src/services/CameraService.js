@@ -10,10 +10,13 @@ export class CameraService {
         this.previousMouse = { x: 0, y: 0 };
         this.zoomLevel = 1;
 
-        // Fly mode
+        // Fly mode - новые параметры
         this.flyModeEnabled = false;
-        this.flySpeed = 0.003;
+        this.flySpeed = 0.005;
         this.flyAngle = 0;
+        this.flyRadius = 8;
+        this.flyHeightOffset = 4;
+        this.flyTiltAngle = 0.6; // ~35 градусов наклона
 
         // Сохраняем начальную позицию
         this.initialPosition = camera.position.clone();
@@ -79,15 +82,19 @@ export class CameraService {
 
         this.flyAngle += this.flySpeed;
 
-        const radius = this.camera.position.distanceTo(this.target);
-        const heightOffset = 3;
+        // Вращаем камеру вокруг центра с постоянным радиусом
+        const radius = this.flyRadius;
+        const heightOffset = this.flyHeightOffset;
+        const tiltAngle = this.flyTiltAngle;
 
-        // Вращаем камеру вокруг центра
-        const newX = this.target.x + radius * Math.sin(this.flyAngle);
-        const newZ = this.target.z + radius * Math.cos(this.flyAngle);
-        const newY = this.target.y + heightOffset + Math.sin(this.flyAngle * 0.3) * 1;
+        // Позиция на окружности с наклоном
+        const x = radius * Math.sin(this.flyAngle);
+        const z = radius * Math.cos(this.flyAngle);
+        const y = heightOffset + Math.sin(this.flyAngle * 0.5) * 0.5;
 
-        this.camera.position.set(newX, newY, newZ);
+        this.camera.position.set(x, y, z);
+
+        // Смотрим на центр
         this.camera.lookAt(this.target);
     }
 

@@ -1,12 +1,12 @@
 import { StorageManager } from '../storage/StorageManager.js';
-import { 
-    PANEL_DEFAULTS, 
-    PANEL_POSITIONS, 
-    PANEL_POSITION_STYLES, 
+import {
+    PANEL_DEFAULTS,
+    PANEL_POSITIONS,
+    PANEL_POSITION_STYLES,
     PANEL_POSITION_ICONS,
     PANEL_POSITION_GRID,
     ALL_PANELS,
-    PANEL_RESTRICTIONS 
+    PANEL_RESTRICTIONS
 } from '../configs/panels.js';
 
 export class PanelService {
@@ -17,6 +17,7 @@ export class PanelService {
         this.panels = {};
         this.settings = {};
         this.listeners = [];
+        this.occupiedPositions = new Map(); // panelName -> position
         this.loadSettings();
     }
 
@@ -27,6 +28,12 @@ export class PanelService {
         } else {
             this.settings = this.getDefaultSettings();
             await this.saveSettings();
+        }
+        // Восстанавливаем occupiedPositions из настроек
+        for (const [name, setting] of Object.entries(this.settings)) {
+            if (setting.visible !== false) {
+                this.occupiedPositions.set(name, setting.position);
+            }
         }
     }
 
@@ -56,9 +63,21 @@ export class PanelService {
             };
         }
         
+        // Сохраняем размеры элемента
+        this._savePanelDimensions(name, element);
+        
         this.applyPosition(name);
         this.applyVisibility(name);
         return this;
+    }
+
+    _savePanelDimensions(name, element) {
+        const rect = element.getBoundingClientRect();
+        if (!this._dimensions) this._dimensions = {};
+        this._dimensions[name] = {
+            width: rect.width || element.style.width || 'auto',
+            height: rect.height || element.style.height || 'auto',
+        };
     }
 
     applyPosition(name) {
@@ -79,18 +98,45 @@ export class PanelService {
         // Проверяем ограничения
         const restrictions = PANEL_RESTRICTIONS[name] || [];
         if (restrictions.includes(position)) {
-            // Находим ближайшую допустимую позицию
             const defaultPos = PANEL_DEFAULTS[name]?.position || PANEL_POSITIONS.BOTTOM_LEFT;
             position = defaultPos;
             setting.position = position;
             this.saveSettings();
         }
 
+        // Сохраняем текущие размеры
+        const dims = this._dimensions?.[name] || {};
+        const currentWidth = element.offsetWidth || element.style.width || dims.width || 'auto';
+        const currentHeight = element.offsetHeight || element.style.height || dims.height || 'auto';
+
+        // Применяем позицию
         const styles = PANEL_POSITION_STYLES[position];
         if (styles) {
+            // Сбрасываем все позиционные стили
+            const posKeys = ['top', 'bottom', 'left', 'right', 'transform'];
+            posKeys.forEach(key => {
+                element.style[key] = '';
+            });
+            
+            // Применяем новые
             Object.entries(styles).forEach(([key, value]) => {
                 element.style[key] = value;
             });
+        }
+
+        // Восстанавливаем размеры
+        if (currentWidth !== 'auto') {
+            element.style.width = typeof currentWidth === 'number' ? currentWidth + 'px' : currentWidth;
+        }
+        if (currentHeight !== 'auto') {
+            element.style.height = typeof currentHeight === 'number' ? currentHeight + 'px' : currentHeight;
+        }
+
+        // Обновляем occupiedPositions
+        if (setting.visible !== false) {
+            this.occupiedPositions.set(name, position);
+        } else {
+            this.occupiedPositions.delete(name);
         }
     }
 
@@ -109,6 +155,12 @@ export class PanelService {
 
         const visible = setting.visible !== undefined ? setting.visible : PANEL_DEFAULTS[name]?.visible !== false;
         element.style.display = visible ? 'block' : 'none';
+        
+        if (visible) {
+            this.occupiedPositions.set(name, setting.position);
+        } else {
+            this.occupiedPositions.delete(name);
+        }
     }
 
     setPanelPosition(name, position) {
@@ -118,6 +170,14 @@ export class PanelService {
         const restrictions = PANEL_RESTRICTIONS[name] || [];
         if (restrictions.includes(position)) {
             console.warn(`⚠️ Position "${position}" is restricted for panel "${name}"`);
+            return;
+        }
+
+        // Проверяем, не занята ли позиция другой панелью
+        const occupant = this.isPositionOccupied(position, name);
+        if (occupant) {
+            // Меняем местами панели
+            this.swapPanels(name, occupant, position);
             return;
         }
 
@@ -132,6 +192,43 @@ export class PanelService {
         this.applyPosition(name);
         this.saveSettings();
         this.notifyListeners(name, 'position', position);
+    }
+
+    swapPanels(panelA, panelB, position) {
+        const posB = this.occupiedPositions.get(panelB);
+        
+        // Меняем позиции в настройках
+        if (this.settings[panelA]) {
+            this.settings[panelA].position = position;
+        }
+        if (this.settings[panelB]) {
+            this.settings[panelB].position = posB || this.getDefaultPosition(panelB);
+        }
+        
+        // Применяем изменения
+        this.applyPosition(panelA);
+        this.applyPosition(panelB);
+        this.saveSettings();
+        
+        console.log(`🔄 Swapped panels: ${panelA} ↔ ${panelB} (positions: ${position} ↔ ${posB})`);
+        this.notifyListeners('swap', { panelA, panelB, position, posB });
+    }
+
+    isPositionOccupied(position, excludePanel = null) {
+        for (const [name, pos] of this.occupiedPositions) {
+            if (name !== excludePanel && pos === position) {
+                return name;
+            }
+        }
+        return null;
+    }
+
+    getDefaultPosition(name) {
+        return PANEL_DEFAULTS[name]?.position || PANEL_POSITIONS.BOTTOM_LEFT;
+    }
+
+    getOccupiedPositions() {
+        return new Map(this.occupiedPositions);
     }
 
     setPanelVisibility(name, visible) {

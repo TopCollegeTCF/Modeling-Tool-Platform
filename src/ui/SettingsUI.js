@@ -4,20 +4,14 @@
  * 📋 ОПИСАНИЕ:
  * Предоставляет интерфейс для настройки различных параметров приложения:
  * - Тема оформления (темная/светлая)
- * - Отображение хелперов (сетка, оси, размер)
+ * - Отображение хелперов (сетка, оси, размер, толщина)
  * - Масштаб интерфейса
  * - Настройки камеры
  * - Режим спавна
  * - Видимость дополнительных кнопок
  * - Позиции и видимость панелей с визуальной сеткой
  *
- * 🏗️ АРХИТЕКТУРА:
- * - Модальное окно с затемнением
- * - Использование UI_TEMPLATES для HTML шаблонов
- * - Сохранение настроек в localStorage
- * - Интеграция с PanelService и SecondaryToolbar
- *
- * @version 1.0.5
+ * @version 1.0.6
  * @author Gabryelf
  * @since 0.1.0
  */
@@ -35,11 +29,7 @@
          this.isOpen = false;
      }
  
-     /**
-      * Инициализирует панель настроек
-      */
      init() {
-         // Создаем затемнение
          this.overlay = createElement('div', {
              id: 'settings-overlay',
              styles: `
@@ -59,7 +49,6 @@
              },
          });
  
-         // Создаем основную панель
          this.element = createElement('div', {
              id: 'settings-panel',
              styles: `
@@ -75,14 +64,13 @@
                  border: 1px solid rgba(255,255,255,0.1);
                  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
                  min-width: 360px;
-                 max-width: 440px;
+                 max-width: 480px;
                  max-height: 80vh;
                  overflow-y: auto;
                  display: none;
              `,
          });
  
-         // Добавляем стили скролла
          this.element.style.cssText += `
              &::-webkit-scrollbar { width: 4px; }
              &::-webkit-scrollbar-track { background: transparent; }
@@ -92,23 +80,14 @@
  
          document.body.appendChild(this.overlay);
          document.body.appendChild(this.element);
- 
-         // Сохраняем ссылку на себя в редакторе
          this.editor.settingsUI = this;
- 
          console.log('✅ SettingsUI initialized');
      }
  
-     /**
-      * Переключает состояние панели
-      */
      toggle() {
          this.isOpen ? this.close() : this.open();
      }
  
-     /**
-      * Открывает панель настроек
-      */
      open() {
          this.isOpen = true;
          this.element.style.display = 'block';
@@ -116,105 +95,122 @@
          this.render();
      }
  
-     /**
-      * Закрывает панель настроек
-      */
      close() {
          this.isOpen = false;
          this.element.style.display = 'none';
          this.overlay.style.display = 'none';
      }
  
-     /**
-      * Создает HTML для иконки
-      * @param {string} iconPath - путь к иконке
-      * @param {number} size - размер иконки
-      * @returns {string} HTML строка
-      */
      createIconHTML(iconPath, size = 16) {
          return `<img src="${iconPath}" style="width:${size}px; height:${size}px; filter: invert(0.5); vertical-align: middle;" onerror="this.style.display='none'">`;
      }
  
-     /**
-      * Создает визуальную сетку позиций для панели
-      * @param {string} panelName - Имя панели
-      * @param {string} currentPos - Текущая позиция
-      * @returns {string} HTML сетки
-      */
-     createPositionGrid(panelName, currentPos) {
+     getPanelIcon(name) {
+         const icons = {
+             'properties': '📐',
+             'sceneTree': '📦',
+             'tools': '🔧',
+             'spawn': '➕',
+         };
+         return icons[name] || '📄';
+     }
+ 
+     createPositionGridWithOccupants(panelName, currentPos) {
          const panelService = this.editor.panelService;
          if (!panelService) return '';
  
-         const restrictions = panelService.getRestrictedPositions(panelName) || [];
          const grid = panelService.getPositionGrid();
-         
+         const occupied = panelService.getOccupiedPositions();
+         const restrictions = panelService.getRestrictedPositions(panelName) || [];
+         const panelIcon = this.getPanelIcon(panelName);
+ 
          let html = `
-             <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; 
-                         max-width: 132px; margin: 4px auto; background: rgba(255,255,255,0.03); 
-                         padding: 4px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.05);">
+             <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px;
+                         max-width: 160px; margin: 4px auto; background: rgba(255,255,255,0.02);
+                         padding: 4px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.05);">
          `;
-         
+ 
          for (const row of grid) {
              for (const pos of row) {
-                 const isActive = pos === currentPos;
+                 const isCurrent = pos === currentPos;
                  const isRestricted = restrictions.includes(pos);
-                 const icon = panelService.getPositionIcon(pos) || '•';
-                 const label = panelService.getPositionLabel(pos) || pos;
-                 
-                 // Определяем цвета
-                 let borderColor, bgColor, textColor, labelColor;
-                 if (isActive) {
+                 const occupant = this.findOccupant(pos, panelName, occupied);
+                 const posIcon = panelService.getPositionIcon(pos) || '•';
+                 const isCenter = pos === 'center';
+ 
+                 let bgColor = 'rgba(255,255,255,0.03)';
+                 let borderColor = 'rgba(255,255,255,0.06)';
+                 let label = '';
+                 let labelColor = '#444';
+                 let tooltip = '';
+ 
+                 if (isCurrent) {
+                     bgColor = 'rgba(74,158,255,0.25)';
                      borderColor = '#4a9eff';
-                     bgColor = 'rgba(74,158,255,0.2)';
-                     textColor = '#4a9eff';
+                     label = '✓';
                      labelColor = '#4a9eff';
+                     tooltip = 'Current position';
+                 } else if (occupant) {
+                     const occIcon = this.getPanelIcon(occupant);
+                     bgColor = 'rgba(81,207,102,0.12)';
+                     borderColor = 'rgba(81,207,102,0.4)';
+                     label = occIcon;
+                     labelColor = '#51cf66';
+                     tooltip = `Occupied by ${occupant}`;
                  } else if (isRestricted) {
-                     borderColor = 'rgba(255,80,80,0.2)';
                      bgColor = 'rgba(255,80,80,0.05)';
-                     textColor = '#ff6b6b';
+                     borderColor = 'rgba(255,80,80,0.15)';
+                     label = '✕';
                      labelColor = '#ff6b6b';
+                     tooltip = 'Position is restricted for this panel';
                  } else {
-                     borderColor = 'rgba(255,255,255,0.08)';
-                     bgColor = 'transparent';
-                     textColor = '#666';
-                     labelColor = '#444';
+                     bgColor = 'rgba(255,255,255,0.03)';
+                     borderColor = 'rgba(255,255,255,0.06)';
+                     label = '○';
+                     labelColor = '#333';
+                     tooltip = 'Click to move here';
                  }
  
-                 // Строим кнопку с сеткой
-                 const isCenter = pos === 'center';
-                 const cellContent = isCenter ? '⊞' : icon;
-                 const cellSize = isCenter ? '18px' : '18px';
-                 const fontSize = isCenter ? '14px' : '16px';
+                 const isClickable = !isCurrent && !occupant && !isRestricted;
+                 const cursor = isClickable ? 'pointer' : 'default';
+                 const clickHandler = isClickable 
+                     ? `window.editor.panelService.setPanelPosition('${panelName}', '${pos}'); window.editor.settingsUI.render();`
+                     : '';
  
                  html += `
-                     <button onclick="${!isRestricted ? `window.editor.panelService.setPanelPosition('${panelName}', '${pos}'); window.editor.settingsUI.render();` : ''}"
-                             title="${isRestricted ? '⚠️ This position is not available for this panel' : label}"
-                             style="padding: 4px 2px; border: 2px solid ${borderColor}; border-radius: 4px;
-                                    background: ${bgColor}; color: ${textColor}; 
-                                    cursor: ${isRestricted ? 'not-allowed' : 'pointer'};
-                                    font-size: ${fontSize}; transition: all 0.2s;
-                                    ${isRestricted ? 'opacity: 0.4;' : ''}
-                                    ${isActive ? 'box-shadow: 0 0 8px rgba(74,158,255,0.2);' : ''}
-                                    display: flex; flex-direction: column; align-items: center;
-                                    justify-content: center; min-height: 28px;"
-                             ${isRestricted ? 'disabled' : ''}>
-                         ${cellContent}
-                         <span style="display: block; font-size: 6px; color: ${labelColor}; margin-top: 1px; 
-                                     ${isActive ? 'font-weight: 600;' : ''}">
-                             ${isActive ? '✓' : isRestricted ? '✕' : ''}
-                         </span>
-                     </button>
+                     <div onclick="${clickHandler}"
+                          title="${tooltip}"
+                          style="padding: 6px 2px; border: 2px solid ${borderColor}; border-radius: 4px;
+                                 background: ${bgColor}; text-align: center; cursor: ${cursor};
+                                 transition: all 0.2s ease; user-select: none;
+                                 ${isCurrent ? 'box-shadow: 0 0 12px rgba(74,158,255,0.15);' : ''}
+                                 ${isClickable ? 'hover: background: rgba(255,255,255,0.08);' : ''}
+                                 display: flex; flex-direction: column; align-items: center; justify-content: center;
+                                 min-height: 32px;">
+                         <div style="font-size: ${isCenter ? '14px' : '16px'}; line-height: 1.2;">
+                             ${isCenter ? '⊞' : posIcon}
+                         </div>
+                         <div style="font-size: 10px; color: ${labelColor}; margin-top: 1px; font-weight: ${isCurrent ? '600' : '400'};">
+                             ${label}
+                         </div>
+                     </div>
                  `;
              }
          }
-         
+ 
          html += '</div>';
          return html;
      }
  
-     /**
-      * Рендерит содержимое панели настроек
-      */
+     findOccupant(position, excludePanel, occupied) {
+         for (const [name, pos] of occupied) {
+             if (name !== excludePanel && pos === position) {
+                 return name;
+             }
+         }
+         return null;
+     }
+ 
      render() {
          if (!this.element) return;
  
@@ -235,20 +231,17 @@
              return;
          }
  
-         // Получаем текущие настройки
          const currentTheme = this.getCurrentTheme();
          const showGrid = this.getShowGrid();
          const showAxes = this.getShowAxes();
          const helperSize = this.getHelperSize();
          const uiScale = this.getUIScale();
-         const positions = panelService.getAvailablePositions();
          const spawnService = this.editor.spawnService;
          const mode = spawnService ? spawnService.getMode() : 'center';
          const cameraService = this.editor.cameraService;
          const allowBelowFloor = cameraService ? cameraService.getAllowBelowFloor() : false;
          const flyModeEnabled = cameraService ? cameraService.flyModeEnabled || false : false;
  
-         // Начинаем собирать HTML
          let html = renderTemplate(UI_TEMPLATES.settings.header, {
              icon: this.createIconHTML(ICONS.settings, 20),
          });
@@ -256,7 +249,6 @@
          // ==================== DISPLAY SECTION ====================
          let displayContent = '';
  
-         // Theme
          displayContent += renderTemplate(UI_TEMPLATES.settings.displaySection.theme, {
              activeBorder: currentTheme === 'dark' ? '#4a9eff' : 'rgba(255,255,255,0.08)',
              activeBg: currentTheme === 'dark' ? 'rgba(74,158,255,0.15)' : 'transparent',
@@ -266,7 +258,6 @@
              inactiveColor: currentTheme === 'light' ? '#4a9eff' : '#888',
          });
  
-         // Grid toggle
          displayContent += renderTemplate(UI_TEMPLATES.settings.displaySection.toggle, {
              label: 'Show Grid',
              onClick: 'toggleGrid',
@@ -276,7 +267,6 @@
              status: showGrid ? '✅ On' : '❌ Off',
          });
  
-         // Axes toggle
          displayContent += renderTemplate(UI_TEMPLATES.settings.displaySection.toggle, {
              label: 'Show Axes',
              onClick: 'toggleAxes',
@@ -286,7 +276,6 @@
              status: showAxes ? '✅ On' : '❌ Off',
          });
  
-         // Helper Size
          const sizeButtons = ['small', 'medium', 'large'].map(size => `
              <button onclick="window.editor.settingsUI.setHelperSize('${size}')"
                      style="padding: 4px 10px; border: 1px solid ${helperSize === size ? '#4a9eff' : 'rgba(255,255,255,0.08)'};
@@ -300,7 +289,22 @@
              buttons: sizeButtons,
          });
  
-         // UI Scale
+         // Thickness slider
+         const currentThickness = this.getHelperThickness();
+         displayContent += `
+             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                 <span style="color: #aaa; font-size: 11px;">Line Thickness</span>
+                 <div style="display: flex; align-items: center; gap: 8px;">
+                     <input type="range" id="helper-thickness" min="1" max="4" step="0.5" value="${currentThickness}"
+                            style="width: 80px; height: 3px; background: rgba(255,255,255,0.1);
+                                   border-radius: 2px; -webkit-appearance: none; appearance: none; cursor: pointer;
+                                   outline: none;"
+                            oninput="window.editor.settingsUI.setHelperThickness(parseFloat(this.value)); document.getElementById('thickness-value').textContent = this.value;">
+                     <span id="thickness-value" style="color: #888; font-size: 10px; min-width: 20px; text-align: center;">${currentThickness}</span>
+                 </div>
+             </div>
+         `;
+ 
          const scaleButtons = [1, 1.5, 2].map(scale => `
              <button onclick="window.editor.settingsUI.setUIScale(${scale})"
                      style="padding: 4px 10px; border: 1px solid ${uiScale === scale ? '#4a9eff' : 'rgba(255,255,255,0.08)'};
@@ -324,8 +328,8 @@
              bg: allowBelowFloor ? 'rgba(255,212,59,0.15)' : 'transparent',
              color: allowBelowFloor ? '#ffd43b' : '#888',
              status: allowBelowFloor ? '✅ Unlimited' : '🔒 Limited',
-             description: allowBelowFloor 
-                 ? 'Camera can move below floor level (Y < 1)' 
+             description: allowBelowFloor
+                 ? 'Camera can move below floor level (Y < 1)'
                  : 'Camera is constrained above floor level (Y ≥ 1)',
          });
  
@@ -336,8 +340,8 @@
              bg: mode === 'marker' ? 'rgba(255,212,59,0.15)' : 'transparent',
              color: mode === 'marker' ? '#ffd43b' : '#888',
              status: mode === 'marker' ? '📍 Marker' : '🎯 Center',
-             description: mode === 'marker' 
-                 ? 'Objects spawn at marker position' 
+             description: mode === 'marker'
+                 ? 'Objects spawn at marker position'
                  : 'Objects spawn in sequence',
          });
  
@@ -362,9 +366,8 @@
              const title = PANEL_NAMES[name] || name;
              const icon = this.getPanelIcon(name);
              const restrictions = panelService.getRestrictedPositions(name) || [];
- 
-             // Создаем визуальную сетку позиций
-             const positionGrid = this.createPositionGrid(name, currentPos);
+             
+             const positionGrid = this.createPositionGridWithOccupants(name, currentPos);
  
              panelsHtml += `
                  <div style="margin-bottom: 10px; padding: 10px; background: rgba(255,255,255,0.03); border-radius: 6px; border: 1px solid rgba(255,255,255,0.04);">
@@ -383,7 +386,9 @@
                          </button>
                      </div>
                      ${positionGrid}
-                     ${restrictions.length > 0 ? `<div style="font-size: 7px; color: #555; margin-top: 4px; text-align: center;">⚠️ Some positions are not available for this panel</div>` : ''}
+                     <div style="font-size: 8px; color: #444; text-align: center; margin-top: 4px;">
+                         ${isVisible ? `📍 ${currentPos.replace('-', ' ')}` : 'Hidden'}
+                     </div>
                  </div>
              `;
          });
@@ -392,16 +397,11 @@
              panels: panelsHtml,
          });
  
-         // ==================== RESET BUTTON ====================
          html += UI_TEMPLATES.settings.resetButton;
  
          this.element.innerHTML = html;
      }
  
-     /**
-      * Рендерит настройки видимости кнопок SecondaryToolbar
-      * @returns {string} HTML строка
-      */
      renderSecondaryToolbarButtons() {
          const secondaryToolbar = this.editor.uiManager?.secondaryToolbar;
          if (!secondaryToolbar) {
@@ -413,13 +413,11 @@
              return '<div style="color:#555; font-size:11px; text-align:center; padding:8px 0;">No additional buttons</div>';
          }
  
-         // Группируем по типу
          const systemButtons = buttons.filter(b => b.isSystem);
          const extraButtons = buttons.filter(b => !b.isSystem);
  
          let html = '';
  
-         // Системные кнопки (всегда показываются, но можно скрыть)
          if (systemButtons.length > 0) {
              html += `
                  <div style="margin-bottom: 6px;">
@@ -431,7 +429,6 @@
              html += `</div>`;
          }
  
-         // Дополнительные кнопки
          if (extraButtons.length > 0) {
              if (systemButtons.length > 0) {
                  html += `<div style="border-top: 1px solid rgba(255,255,255,0.04); margin: 4px 0;"></div>`;
@@ -449,15 +446,10 @@
          return html;
      }
  
-     /**
-      * Рендерит переключатель для одной кнопки
-      * @param {Object} btn - Конфигурация кнопки
-      * @returns {string} HTML строка
-      */
      renderButtonToggle(btn) {
          const isActive = btn.id === 'cameraFly' && this.editor.cameraService?.flyModeEnabled;
          return `
-             <div style="display: flex; justify-content: space-between; align-items: center; padding: 4px 0; 
+             <div style="display: flex; justify-content: space-between; align-items: center; padding: 4px 0;
                          border-bottom: 1px solid rgba(255,255,255,0.03);">
                  <div style="display: flex; align-items: center; gap: 6px;">
                      <span style="font-size: 14px;">${btn.icon || '🔧'}</span>
@@ -473,18 +465,6 @@
                  </button>
              </div>
          `;
-     }
- 
-     // ==================== ПАНЕЛЬНЫЕ ИКОНКИ ====================
- 
-     getPanelIcon(name) {
-         const icons = {
-             'properties': '📐',
-             'sceneTree': '📦',
-             'tools': '🔧',
-             'spawn': '➕',
-         };
-         return icons[name] || '📄';
      }
  
      // ==================== НАСТРОЙКИ ОТОБРАЖЕНИЯ ====================
@@ -565,6 +545,18 @@
          this.render();
      }
  
+     getHelperThickness() {
+         return parseFloat(localStorage.getItem('editor_helper_thickness') || '1');
+     }
+ 
+     setHelperThickness(thickness) {
+         localStorage.setItem('editor_helper_thickness', String(thickness));
+         if (this.editor.sceneManager) {
+             this.editor.sceneManager.setHelperThickness(thickness);
+         }
+         this.render();
+     }
+ 
      getUIScale() {
          return parseFloat(localStorage.getItem('editor_ui_scale') || '1');
      }
@@ -595,8 +587,6 @@
              el.style.marginTop = `-${offsetY}px`;
          });
      }
- 
-     // ==================== НАСТРОЙКИ КАМЕРЫ ====================
  
      toggleCameraFloorLimit() {
          const cameraService = this.editor.cameraService;

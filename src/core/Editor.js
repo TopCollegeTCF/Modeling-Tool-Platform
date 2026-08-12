@@ -1,9 +1,22 @@
+/**
+ * 📄 EDITOR - движок для создания проекта и его компонентов
+ *
+ * 📋 ОПИСАНИЕ:
+ * Содержит связь со всеми важными менеджерами и сервисами
+ * Запускается одним из первых и создает пространство и окружение.
+ *
+ * @version 1.1.1
+ * @author Gabryelf
+ * @since 0.1.0
+ */
+
 import * as THREE from 'three';
 import { SceneManager } from './SceneManager.js';
 import { RenderManager } from './RenderManager.js';
 import { SelectionManager } from './SelectionManager.js';
 import { TransformManager } from './TransformManager.js';
 import { EventManager } from './EventManager.js';
+import { ShapeManager } from './ShapeManager.js';
 import { ToolManager } from '../tools/ToolManager.js';
 import { UIManager } from '../ui/UIManager.js';
 import { CameraService } from '../services/CameraService.js';
@@ -12,9 +25,6 @@ import { SceneService } from '../services/SceneService.js';
 import { PanelService } from '../services/PanelService.js';
 import { GizmoService } from '../services/GizmoService.js';
 import { StorageManager } from '../storage/StorageManager.js';
-import { Cube } from '../entities/Cube.js';
-import { Sphere } from '../entities/Sphere.js';
-import { Cylinder } from '../entities/Cylinder.js';
 import { HistoryManager } from './HistoryManager.js';
 
 export class Editor {
@@ -25,31 +35,32 @@ export class Editor {
         this.selectionManager = new SelectionManager();
         this.transformManager = new TransformManager();
         this.eventManager = new EventManager();
+        this.shapeManager = new ShapeManager(this);
         this.toolManager = new ToolManager(this);
         this.uiManager = new UIManager(this);
         this.historyManager = new HistoryManager(this, 50);
-        
+
         // Services
         this.cameraService = null;
         this.spawnService = null;
         this.sceneService = null;
         this.panelService = null;
         this.gizmoService = null;
-        
+
         // Storage
         this.storage = new StorageManager();
-        
+
         // State
         this.isRunning = false;
         this.entityIdCounter = 0;
-        
+
         // Инициализация
         this.initScene();
         this.initServices();
         this.initGizmo();
         this.initUI();
         this.initEvents();
-        
+
         this.isRunning = true;
         this.animate();
 
@@ -57,7 +68,7 @@ export class Editor {
             this.historyManager.saveInitialState();
         }, 200);
     }
-    
+
     initScene() {
         this.sceneManager.init();
         this.renderManager.init(this.sceneManager.getScene());
@@ -79,23 +90,20 @@ export class Editor {
                 console.warn('⚠️ Cannot init Gizmo: RenderManager or CameraService not ready');
                 return;
             }
-
             this.gizmoService = new GizmoService(this);
             this.gizmoService.init(
                 this.renderManager.getCamera(),
                 this.renderManager.getRenderer()
             );
-
             if (this.sceneManager && this.sceneManager.getScene()) {
                 this.sceneManager.getScene().add(this.gizmoService.getGizmo());
             }
-
             console.log('✅ GizmoService initialized');
         } catch (error) {
             console.error('❌ Failed to initialize GizmoService:', error);
         }
     }
-    
+
     initUI() {
         this.uiManager.init();
         this.settingsUI = this.uiManager.settings;
@@ -104,21 +112,26 @@ export class Editor {
 
     initEvents() {
         const canvas = this.renderManager.getRenderer().domElement;
-        // Передаем toolManager в eventManager
         this.eventManager.init(canvas, this.toolManager);
         this.setupEvents();
         console.log('✅ Events initialized');
     }
 
-    
     setupEvents() {
         // Mouse events for camera
         this.eventManager.on('mousedown', (event) => {
-            // Не обрабатываем события, если активен Gizmo или FaceEditTool
             const currentTool = this.toolManager.getCurrentTool();
-            if (currentTool && (currentTool.name === 'Face Edit' || currentTool.name === 'Move' || 
+            if (currentTool && (currentTool.name === 'Face Edit' || currentTool.name === 'Move' ||
                 currentTool.name === 'Scale' || currentTool.name === 'Rotate')) {
-                // Инструменты сами обрабатывают события
+                return;
+            }
+
+            // Если включен Fly Mode - выключаем при клике
+            if (this.cameraService && this.cameraService.flyModeEnabled) {
+                this.cameraService.setFlyMode(false);
+                if (this.uiManager.secondaryToolbar) {
+                    this.uiManager.secondaryToolbar.update();
+                }
                 return;
             }
 
@@ -131,11 +144,10 @@ export class Editor {
 
         this.eventManager.on('mousemove', (event) => {
             const currentTool = this.toolManager.getCurrentTool();
-            if (currentTool && (currentTool.name === 'Face Edit' || currentTool.name === 'Move' || 
+            if (currentTool && (currentTool.name === 'Face Edit' || currentTool.name === 'Move' ||
                 currentTool.name === 'Scale' || currentTool.name === 'Rotate')) {
                 return;
             }
-            
             this.cameraService.orbit(event.clientX, event.clientY);
             this.cameraService.pan(event.clientX, event.clientY);
         });
@@ -154,19 +166,17 @@ export class Editor {
             event.preventDefault();
         });
 
-        // Selection click - только для SelectTool
+        // Selection click
         this.eventManager.on('click', (event) => {
             const currentTool = this.toolManager.getCurrentTool();
             if (currentTool && currentTool.name !== 'Select') {
-                return; // Только SelectTool обрабатывает клики для выделения
+                return;
             }
-
             if (event.button === 0 && !event.ctrlKey && !event.metaKey) {
                 const selected = this.raycastSelect(event);
                 if (selected) {
                     this.selectionManager.select(selected);
                     this.uiManager.updateUI();
-                    // Обновляем Gizmo для нового выделения
                     if (this.gizmoService) {
                         const currentTool = this.toolManager.getCurrentTool();
                         if (currentTool && currentTool.name !== 'Select') {
@@ -185,10 +195,21 @@ export class Editor {
 
         // Keyboard events
         this.eventManager.on('keydown', (event) => {
+            // Escape выключает fly mode
+            if (event.key === 'Escape') {
+                if (this.cameraService && this.cameraService.flyModeEnabled) {
+                    this.cameraService.setFlyMode(false);
+                    if (this.uiManager.secondaryToolbar) {
+                        this.uiManager.secondaryToolbar.update();
+                    }
+                    return;
+                }
+            }
+
             if (event.key === 'Delete' || event.key === 'Backspace') {
                 this.deleteSelected();
             }
-            // Undo/Redo
+
             if (event.ctrlKey && event.key === 'z') {
                 event.preventDefault();
                 this.undo();
@@ -197,7 +218,7 @@ export class Editor {
                 event.preventDefault();
                 this.redo();
             }
-            // быстрая смена ограничения камеры (Ctrl+Shift+F)
+
             if (event.ctrlKey && event.shiftKey && event.key === 'F') {
                 event.preventDefault();
                 this.toggleCameraFloorLimit();
@@ -207,7 +228,8 @@ export class Editor {
             if (event.key === '2') this.toolManager.switchTool('move');
             if (event.key === '3') this.toolManager.switchTool('scale');
             if (event.key === '4') this.toolManager.switchTool('rotate');
-            if (event.key === '5') this.toolManager.switchTool('duplicate'); // Изменено с 'face-edit'
+            if (event.key === '5') this.toolManager.switchTool('duplicate');
+
             if (event.key === 'r' || event.key === 'R') {
                 this.cameraService.reset();
             }
@@ -216,107 +238,63 @@ export class Editor {
             }
         });
     }
-    
+
+    // === МЕТОДЫ ДЛЯ СОЗДАНИЯ ФИГУР (делегируем ShapeManager) ===
+
+    addCube(options = {}) {
+        return this.shapeManager.createCube(options);
+    }
+
+    addSphere(options = {}) {
+        return this.shapeManager.createSphere(options);
+    }
+
+    addCylinder(options = {}) {
+        return this.shapeManager.createCylinder(options);
+    }
+
+    // === ОСТАЛЬНЫЕ МЕТОДЫ ===
+
     toggleSpawnMode() {
         const modes = ['center', 'marker'];
         const current = this.spawnService.getMode();
         const next = current === 'center' ? 'marker' : 'center';
         this.spawnService.setMode(next);
         this.uiManager.updateUI();
-        // Обновляем настройки если они открыты
         if (this.settingsUI && this.settingsUI.isOpen) {
             this.settingsUI.render();
         }
         console.log(`📍 Spawn mode: ${next}`);
     }
-    
+
     raycastSelect(event) {
         const renderer = this.renderManager.getRenderer();
         const camera = this.renderManager.getCamera();
         const rect = renderer.domElement.getBoundingClientRect();
-        
         const mouse = new THREE.Vector2(
             ((event.clientX - rect.left) / rect.width) * 2 - 1,
             -((event.clientY - rect.top) / rect.height) * 2 + 1
         );
-        
         const raycaster = new THREE.Raycaster();
         raycaster.setFromCamera(mouse, camera);
-        
         const objects = this.sceneManager.getAllEntities();
         const intersects = raycaster.intersectObjects(objects);
-        
         if (intersects.length > 0) {
             return intersects[0].object;
         }
         return null;
     }
-    
-    // обертка для всех действий с записью в историю
-    addCube(options = {}) {
-        this.entityIdCounter++;
-        const cube = new Cube(1, 1, 1, options);
-        cube.userData.id = this.entityIdCounter;
-        const pos = this.spawnService.getSpawnPosition();
-        cube.position.copy(pos);
-        this.sceneManager.addEntity(cube);
-        this.selectionManager.select(cube);
-        this.uiManager.updateUI();
-        
-        // запись
-        this.historyManager.push('add cube');
-        
-        console.log(`✅ Cube created (id: ${this.entityIdCounter})`);
-        return cube;
-    }
-    
-    addSphere(options = {}) {
-        this.entityIdCounter++;
-        const sphere = new Sphere(0.5, options);
-        sphere.userData.id = this.entityIdCounter;
-        const pos = this.spawnService.getSpawnPosition();
-        sphere.position.copy(pos);
-        this.sceneManager.addEntity(sphere);
-        this.selectionManager.select(sphere);
-        this.uiManager.updateUI();
-        
-        // запись
-        this.historyManager.push('add sphere');
-        
-        console.log(`✅ Sphere created (id: ${this.entityIdCounter})`);
-        return sphere;
-    }
-    
-    addCylinder(options = {}) {
-        this.entityIdCounter++;
-        const cylinder = new Cylinder(0.5, 0.5, 1, options);
-        cylinder.userData.id = this.entityIdCounter;
-        const pos = this.spawnService.getSpawnPosition();
-        cylinder.position.copy(pos);
-        this.sceneManager.addEntity(cylinder);
-        this.selectionManager.select(cylinder);
-        this.uiManager.updateUI();
-        
-        // запись
-        this.historyManager.push('add cylinder');
-        
-        console.log(`✅ Cylinder created (id: ${this.entityIdCounter})`);
-        return cylinder;
-    }
-    
+
     deleteSelected() {
         const entity = this.selectionManager.getSelected();
         if (entity) {
             this.sceneManager.removeEntity(entity);
             this.selectionManager.clear();
             this.uiManager.updateUI();
-            
-            // запись
             this.historyManager.push('delete');
         }
     }
 
-    // МЕТОДЫ ДЛЯ UNDO/REDO
     undo() {
         this.historyManager.undo();
     }
@@ -325,57 +303,56 @@ export class Editor {
         this.historyManager.redo();
     }
 
-    // Сериализация всей сцены для сохранения
     exportScene() {
         return this.historyManager.exportHistory();
     }
 
-    // Десериализация сцены из сохраненного файла
     importScene(data) {
         this.historyManager.importHistory(data);
     }
 
-    // переключение ограничения камеры
     toggleCameraFloorLimit() {
         if (this.cameraService) {
             this.cameraService.setAllowBelowFloor(!this.cameraService.getAllowBelowFloor());
-            
-            // Обновляем UI настроек, если они открыты
             if (this.settingsUI && this.settingsUI.isOpen) {
                 this.settingsUI.render();
             }
-            
             console.log(`📷 Camera floor limit toggled via hotkey`);
         }
     }
-    
+
     animate() {
         if (!this.isRunning) return;
         requestAnimationFrame(() => this.animate());
-        
+
+        // Fly mode animation
+        if (this.cameraService && this.cameraService.flyModeEnabled) {
+            this.cameraService.updateFlyMode();
+        }
+
         this.toolManager.update();
         if (this.gizmoService) {
             this.gizmoService.update();
         }
         this.renderManager.render();
     }
-    
+
     getScene() {
         return this.sceneManager.getScene();
     }
-    
+
     getCamera() {
         return this.renderManager.getCamera();
     }
-    
+
     getRenderer() {
         return this.renderManager.getRenderer();
     }
-    
+
     getSpawnService() {
         return this.spawnService;
     }
-    
+
     getPanelService() {
         return this.panelService;
     }

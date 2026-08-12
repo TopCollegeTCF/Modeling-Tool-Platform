@@ -1,7 +1,7 @@
 /**
  * ⚙️ SettingsUI - Панель настроек приложения
  *
- * @version 1.0.7
+ * @version 1.0.10
  * @author Gabryelf
  * @since 0.1.0
  */
@@ -92,7 +92,18 @@
      }
  
      createIconHTML(iconPath, size = 16) {
+         if (!iconPath) return '';
          return `<img src="${iconPath}" style="width:${size}px; height:${size}px; filter: invert(0.5); vertical-align: middle;" onerror="this.style.display='none'">`;
+     }
+ 
+     getDisplayIcon(icon) {
+         if (!icon) return '🔧';
+         // Если это путь к файлу (начинается с / или http)
+         if (icon.startsWith('/') || icon.startsWith('http')) {
+             return this.createIconHTML(icon, 16);
+         }
+         // Если это эмодзи или текст
+         return icon;
      }
  
      getPanelIcon(name) {
@@ -112,9 +123,7 @@
          const grid = panelService.getPositionGrid();
          const occupied = panelService.getOccupiedPositions();
          const restrictions = panelService.getRestrictedPositions(panelName) || [];
-         const panelIcon = this.getPanelIcon(panelName);
  
-         // Получаем имена панелей с их позициями для отображения
          const occupiedMap = new Map();
          for (const [name, pos] of occupied) {
              if (name !== panelName) {
@@ -172,7 +181,7 @@
                      isClickable = true;
                  }
  
-                 const clickHandler = isClickable 
+                 const clickHandler = isClickable
                      ? `window.editor.panelService.setPanelPosition('${panelName}', '${pos}'); window.editor.settingsUI.render();`
                      : '';
  
@@ -180,17 +189,16 @@
                      <div onclick="${clickHandler}"
                           title="${tooltip}"
                           style="padding: 6px 2px; border: 2px solid ${borderColor}; border-radius: 4px;
-                                 background: ${bgColor}; text-align: center; 
+                                 background: ${bgColor}; text-align: center;
                                  cursor: ${isClickable ? 'pointer' : 'default'};
                                  transition: all 0.2s ease; user-select: none;
                                  ${isCurrent ? 'box-shadow: 0 0 12px rgba(74,158,255,0.15);' : ''}
-                                 ${isClickable ? 'hover: background: rgba(255,255,255,0.08);' : ''}
                                  display: flex; flex-direction: column; align-items: center; justify-content: center;
                                  min-height: 36px; min-width: 40px;">
                          <div style="font-size: ${isCenter ? '14px' : '18px'}; line-height: 1.2;">
                              ${isCenter ? '⊞' : posIcon}
                          </div>
-                         <div style="font-size: 10px; color: ${labelColor}; margin-top: 2px; 
+                         <div style="font-size: 10px; color: ${labelColor}; margin-top: 2px;
                                      font-weight: ${isCurrent ? '600' : '400'};
                                      ${occupant ? 'background: rgba(81,207,102,0.1); padding: 0 4px; border-radius: 8px;' : ''}">
                              ${label}
@@ -229,7 +237,6 @@
          const showGrid = this.getShowGrid();
          const showAxes = this.getShowAxes();
          const helperSize = this.getHelperSize();
-         const uiScale = this.getUIScale();
          const spawnService = this.editor.spawnService;
          const mode = spawnService ? spawnService.getMode() : 'center';
          const cameraService = this.editor.cameraService;
@@ -297,19 +304,6 @@
              </div>
          `;
  
-         const scaleButtons = [1, 1.5, 2].map(scale => `
-             <button onclick="window.editor.settingsUI.setUIScale(${scale})"
-                     style="padding: 4px 10px; border: 1px solid ${uiScale === scale ? '#4a9eff' : 'rgba(255,255,255,0.08)'};
-                            border-radius: 4px; background: ${uiScale === scale ? 'rgba(74,158,255,0.15)' : 'transparent'};
-                            color: ${uiScale === scale ? '#4a9eff' : '#888'}; cursor: pointer; font-size: 10px;
-                            transition: all 0.2s;">
-                 ${scale}x
-             </button>
-         `).join('');
-         displayContent += renderTemplate(UI_TEMPLATES.settings.displaySection.uiScale, {
-             buttons: scaleButtons,
-         });
- 
          html += renderTemplate(UI_TEMPLATES.settings.displaySection.container, {
              content: displayContent,
          });
@@ -358,7 +352,6 @@
              const title = PANEL_NAMES[name] || name;
              const icon = this.getPanelIcon(name);
              const restrictions = panelService.getRestrictedPositions(name) || [];
-             
              const positionGrid = this.createPositionGridWithOccupants(name, currentPos);
  
              panelsHtml += `
@@ -440,11 +433,24 @@
  
      renderButtonToggle(btn) {
          const isActive = btn.id === 'cameraFly' && this.editor.cameraService?.flyModeEnabled;
+         
+         // Получаем иконку для отображения
+         let iconDisplay = '🔧';
+         if (btn.icon) {
+             if (btn.icon.startsWith('/') || btn.icon.startsWith('http')) {
+                 // Это путь к файлу - создаем img
+                 iconDisplay = this.createIconHTML(btn.icon, 16);
+             } else {
+                 // Это эмодзи или текст
+                 iconDisplay = btn.icon;
+             }
+         }
+ 
          return `
              <div style="display: flex; justify-content: space-between; align-items: center; padding: 4px 0;
                          border-bottom: 1px solid rgba(255,255,255,0.03);">
                  <div style="display: flex; align-items: center; gap: 6px;">
-                     <span style="font-size: 14px;">${btn.icon || '🔧'}</span>
+                     <span style="font-size: 14px; display: flex; align-items: center; justify-content: center; width: 20px;">${iconDisplay}</span>
                      <span style="color: #aaa; font-size: 11px;">${btn.title || btn.id}</span>
                      ${isActive ? `<span style="font-size: 8px; color: #4a9eff; background: rgba(74,158,255,0.1); padding: 1px 6px; border-radius: 8px;">active</span>` : ''}
                  </div>
@@ -547,29 +553,6 @@
              this.editor.sceneManager.setHelperThickness(thickness);
          }
          this.render();
-     }
- 
-     getUIScale() {
-         return parseFloat(localStorage.getItem('editor_ui_scale') || '1');
-     }
- 
-     setUIScale(scale) {
-         localStorage.setItem('editor_ui_scale', String(scale));
-         this.applyUIScale(scale);
-         this.render();
-     }
- 
-     applyUIScale(scale) {
-         const root = document.documentElement;
-         root.style.setProperty('--ui-scale', scale);
-         
-         // Обновляем размеры всех панелей
-         const panelService = this.editor.panelService;
-         if (panelService) {
-             ALL_PANELS.forEach(name => {
-                 panelService.applyPosition(name);
-             });
-         }
      }
  
      toggleCameraFloorLimit() {

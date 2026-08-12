@@ -5,12 +5,11 @@
  * Содержит HTML шаблоны для всех UI компонентов.
  * Используется для создания элементов интерфейса.
  *
- * @version 1.0.0
+ * @version 1.0.1
  * @author Gabryelf
  * @since 0.1.0
  */
-
-export const UI_TEMPLATES = {
+ export const UI_TEMPLATES = {
     /**
      * Шаблон панели свойств
      */
@@ -100,7 +99,6 @@ export const UI_TEMPLATES = {
             `,
         },
     },
-
     /**
      * Шаблоны для SceneTree
      */
@@ -133,7 +131,6 @@ export const UI_TEMPLATES = {
             </div>
         `,
     },
-
     /**
      * Шаблоны для SpawnUI
      */
@@ -182,7 +179,6 @@ export const UI_TEMPLATES = {
             `,
         },
     },
-
     /**
      * Шаблоны для SettingsUI
      */
@@ -235,14 +231,6 @@ export const UI_TEMPLATES = {
             helperSize: `
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                     <span style="color: #aaa; font-size: 11px;">Helper Size</span>
-                    <div style="display: flex; gap: 4px;">
-                        {buttons}
-                    </div>
-                </div>
-            `,
-            uiScale: `
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <span style="color: #aaa; font-size: 11px;">UI Scale</span>
                     <div style="display: flex; gap: 4px;">
                         {buttons}
                     </div>
@@ -324,29 +312,7 @@ export const UI_TEMPLATES = {
                 🔄 Reset All Panel Settings
             </button>
         `,
-        positionGrid: `
-        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; 
-                    max-width: 120px; margin: 4px auto; background: rgba(255,255,255,0.03); 
-                    padding: 4px; border-radius: 4px;">
-            {cells}
-        </div>
-        `,
-
-        positionCell: `
-        <button onclick="{onClick}"
-                title="{title}"
-                style="padding: 4px 2px; border: 2px solid {border}; border-radius: 4px;
-                       background: {bg}; color: {color}; cursor: {cursor};
-                       font-size: 14px; transition: all 0.2s; {extra}"
-                {disabled}>
-            {icon}
-            <span style="display: block; font-size: 6px; color: {labelColor};">
-                {label}
-            </span>
-        </button>
-        `,
     },
-
     /**
      * Шаблоны для SecondaryToolbar
      */
@@ -376,8 +342,6 @@ export const UI_TEMPLATES = {
             <div style="border-top: 1px solid rgba(255,255,255,0.08); margin: 3px 0;"></div>
         `,
     },
-
-
 };
 
 /**

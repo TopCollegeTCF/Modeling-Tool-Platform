@@ -12,12 +12,6 @@ setTimeout(() => {
         editor.settingsUI.applyTheme(theme);
     }
     
-    // Масштаб UI
-    const uiScale = parseFloat(localStorage.getItem('editor_ui_scale') || '1');
-    if (editor.settingsUI) {
-        editor.settingsUI.applyUIScale(uiScale);
-    }
-    
     // Хелперы
     const showGrid = localStorage.getItem('editor_show_grid') !== 'false';
     const showAxes = localStorage.getItem('editor_show_axes') !== 'false';

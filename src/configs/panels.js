@@ -69,31 +69,53 @@ export const PANEL_POSITION_GRID = [
     ['bottom-left', 'bottom-center', 'bottom-right'],
 ];
 
-// Дефолтные позиции и размеры панелей
+// Буферные зоны между панелями
+export const PANEL_BUFFER = {
+    horizontal: 6,
+    vertical: 6,
+};
+
+// Минимальные размеры панелей (компактные)
+export const PANEL_MIN_SIZES = {
+    properties: { width: 180, height: 280 },
+    sceneTree: { width: 160, height: 240 },
+    tools: { width: 44, height: 240 },
+    spawn: { width: 170, height: 200 },
+};
+
+// Максимальные размеры панелей
+export const PANEL_MAX_SIZES = {
+    properties: { width: 280, height: 420 },
+    sceneTree: { width: 240, height: 380 },
+    tools: { width: 60, height: 340 },
+    spawn: { width: 240, height: 340 },
+};
+
+// Дефолтные позиции и размеры панелей (базовые)
 export const PANEL_DEFAULTS = {
     properties: {
         position: PANEL_POSITIONS.TOP_RIGHT,
         visible: true,
         title: 'Properties',
         icon: '📐',
-        width: 240,
-        height: 380,
+        width: 200,
+        height: 320,
     },
     sceneTree: {
         position: PANEL_POSITIONS.BOTTOM_RIGHT,
         visible: true,
         title: 'Objects',
         icon: '📦',
-        width: 200,
-        height: 300,
+        width: 180,
+        height: 260,
     },
     tools: {
         position: PANEL_POSITIONS.MIDDLE_LEFT,
         visible: true,
         title: 'Tools',
         icon: '🔧',
-        width: 50,
-        height: 280,
+        width: 44,
+        height: 260,
         restrictedPositions: ['top-left', 'top-center', 'top-right'],
     },
     spawn: {
@@ -101,8 +123,8 @@ export const PANEL_DEFAULTS = {
         visible: true,
         title: 'Create',
         icon: '➕',
-        width: 190,
-        height: 180,
+        width: 180,
+        height: 220,
     },
 };
 
@@ -115,17 +137,15 @@ export const PANEL_NAMES = {
 
 export const ALL_PANELS = ['properties', 'sceneTree', 'tools', 'spawn'];
 
-// Ограничения для панелей (не могут занимать эти позиции)
 export const PANEL_RESTRICTIONS = {
     tools: ['top-left', 'top-center', 'top-right'],
-    properties: [], // Может быть где угодно
-    sceneTree: [], // Может быть где угодно
-    spawn: [], // Может быть где угодно
+    properties: [],
+    sceneTree: [],
+    spawn: [],
 };
 
-// Приоритеты панелей при конфликте позиций (чем выше число, тем выше приоритет)
 export const PANEL_PRIORITY = {
-    tools: 0, // Самый низкий приоритет - всегда уступает
+    tools: 0,
     properties: 1,
     sceneTree: 1,
     spawn: 1,

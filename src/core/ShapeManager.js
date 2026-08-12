@@ -5,9 +5,8 @@
  * Отвечает за создание и управление фигурами в сцене.
  * Реализует фабричный метод для создания различных типов фигур.
  * 
- * @version 1.0.0
+ * @version 0.0.2
  * @author Gabryelf
- * @since 0.1.0
  */
 import { Cube } from '../entities/Cube.js';
 import { Sphere } from '../entities/Sphere.js';
@@ -21,6 +20,14 @@ export class ShapeManager {
             cube: this.createCube.bind(this),
             sphere: this.createSphere.bind(this),
             cylinder: this.createCylinder.bind(this),
+
+            // заглушки для новых фигур
+            cone: this.createCone.bind(this),
+            torus: this.createTorus.bind(this),
+            torusKnot: this.createTorusKnot.bind(this),
+            icosahedron: this.createIcosahedron.bind(this),
+            octahedron: this.createOctahedron.bind(this),
+            dodecahedron: this.createDodecahedron.bind(this),
         };
     }
 
@@ -175,5 +182,36 @@ export class ShapeManager {
             types: Object.keys(this.shapeFactories),
             defaults: DEFAULTS.shapes,
         };
+    }
+
+     // Заглушки для новых фигур (временные, пока не реализованы)
+     createCone(options = {}) {
+        console.warn('⚠️ Cone shape not implemented yet');
+        return this.createCylinder({ ...options, radiusTop: 0, height: 1.5 });
+    }
+
+    createTorus(options = {}) {
+        console.warn('⚠️ Torus shape not implemented yet');
+        return this.createSphere({ ...options, radius: 0.8 });
+    }
+
+    createTorusKnot(options = {}) {
+        console.warn('⚠️ Torus Knot shape not implemented yet');
+        return this.createSphere({ ...options, radius: 0.8, color: 0x9775fa });
+    }
+
+    createIcosahedron(options = {}) {
+        console.warn('⚠️ Icosahedron shape not implemented yet');
+        return this.createSphere({ ...options, radius: 0.8, color: 0x4a9eff });
+    }
+
+    createOctahedron(options = {}) {
+        console.warn('⚠️ Octahedron shape not implemented yet');
+        return this.createSphere({ ...options, radius: 0.8, color: 0x51cf66 });
+    }
+
+    createDodecahedron(options = {}) {
+        console.warn('⚠️ Dodecahedron shape not implemented yet');
+        return this.createSphere({ ...options, radius: 0.8, color: 0xffa94d });
     }
 }

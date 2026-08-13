@@ -1,48 +1,86 @@
 /**
  * 📜 History Manager - Управление историей действий
- * 
+ *
  * 🎯 Задача: Хранит все действия пользователя с возможностью отката (Undo/Redo)
  * 💾 Хранение: Каждый шаг - это полная копия состояния сцены в JSON
  * 🔮 Будущее: При подключении БД, история будет сохраняться в базу данных
- * 
- * @version 1.0.0
+ *
+ * @version 1.1.0
  * @author Gabryelf
  * @since 0.0.8
  */
  export class HistoryManager {
     constructor(editor, maxSteps = 50) {
         this.editor = editor;
-        this.maxSteps = maxSteps; // Максимальное количество шагов
-        this.history = []; // Массив снимков
-        this.currentIndex = -1; // Текущий индекс
-        this.isRestoring = false; // Флаг восстановления (чтобы не создавать лишние снимки)
-        
-        // Для будущей БД: здесь будет идентификатор сессии
+        this.maxSteps = maxSteps;
+        this.history = [];
+        this.currentIndex = -1;
+        this.isRestoring = false;
+
+        // 🔥 Новые поля для группировки
+        this.groupStack = [];
+        this.isInGroup = false;
+        this.groupName = null;
+
         this.sessionId = null;
-        
         console.log('📜 HistoryManager initialized (max steps: ' + maxSteps + ')');
     }
 
     /**
+     * Начинает группировку действий
+     */
+    beginGroup(groupName = 'group') {
+        if (this.isInGroup) {
+            console.warn('⚠️ Already in a group, ending previous group');
+            this.endGroup();
+        }
+        this.isInGroup = true;
+        this.groupName = groupName;
+        const state = this.captureState(`group_start_${groupName}`);
+        this.groupStack.push(state);
+        console.log(`📦 Group started: ${groupName}`);
+    }
+
+    /**
+     * Завершает группировку действий
+     */
+    endGroup() {
+        if (!this.isInGroup || this.groupStack.length === 0) {
+            console.warn('⚠️ No active group to end');
+            return;
+        }
+        const state = this.captureState(`group_end_${this.groupName}`);
+        const groupState = {
+            type: 'group',
+            name: this.groupName,
+            startState: this.groupStack[0],
+            endState: state,
+            timestamp: Date.now()
+        };
+        this.history.push(groupState);
+        this.currentIndex = this.history.length - 1;
+
+        this.groupStack = [];
+        this.isInGroup = false;
+        console.log(`📦 Group ended: ${this.groupName}`);
+        this.groupName = null;
+    }
+
+    /**
      * Создает снимок текущего состояния сцены
-     * @param {string} actionName - Название действия (для отладки)
-     * @returns {Object} Снимок состояния
      */
     captureState(actionName = 'unknown') {
         if (this.isRestoring) return null;
-
         const state = {
             timestamp: Date.now(),
             action: actionName,
             objects: this.captureObjects()
         };
-
         return state;
     }
 
     /**
      * Захватывает все объекты сцены в JSON
-     * @returns {Array} Массив объектов в JSON
      */
     captureObjects() {
         const entities = this.editor.sceneManager.getAllEntities();
@@ -51,8 +89,6 @@
 
     /**
      * Сериализует один объект в JSON
-     * @param {Entity} entity - Объект для сериализации
-     * @returns {Object} Сериализованный объект
      */
     serializeEntity(entity) {
         const data = {
@@ -76,18 +112,15 @@
             }
         };
 
-        // Сохраняем цвет
         if (entity.material && entity.material.color) {
             data.color = entity.material.color.getHex();
         }
 
-        // Сохраняем прозрачность
         if (entity.material) {
             data.opacity = entity.material.opacity || 1;
             data.transparent = entity.material.transparent || false;
         }
 
-        // Сохраняем параметры геометрии для разных типов
         if (entity.type === 'cube') {
             data.width = entity.width;
             data.height = entity.height;
@@ -105,37 +138,34 @@
 
     /**
      * Восстанавливает состояние из снимка
-     * @param {Object} state - Снимок состояния
      */
     restoreState(state) {
         if (!state) return;
 
-        this.isRestoring = true;
+        // Если это группа, восстанавливаем конечное состояние
+        if (state.type === 'group') {
+            state = state.endState;
+        }
 
+        this.isRestoring = true;
         try {
-            // Очищаем сцену
             const entities = this.editor.sceneManager.getAllEntities();
             entities.forEach(entity => {
                 this.editor.sceneManager.removeEntity(entity);
             });
 
-            // Сбрасываем счетчик ID
             this.editor.entityIdCounter = 0;
 
-            // Восстанавливаем объекты
             if (state.objects && state.objects.length > 0) {
                 state.objects.forEach(objData => {
                     this.deserializeEntity(objData);
                 });
             }
 
-            // Очищаем выделение
             this.editor.selectionManager.clear();
-
-            // Обновляем UI
             this.editor.uiManager.updateUI();
 
-            console.log('✅ State restored: ' + state.objects.length + ' objects');
+            console.log('✅ State restored: ' + state.objects?.length + ' objects');
         } catch (error) {
             console.error('❌ Error restoring state:', error);
         } finally {
@@ -145,13 +175,10 @@
 
     /**
      * Десериализует объект из JSON и добавляет на сцену
-     * @param {Object} data - Данные объекта
-     * @returns {Entity} Восстановленный объект
      */
     deserializeEntity(data) {
         let entity = null;
 
-        // Создаем объект нужного типа
         switch (data.type) {
             case 'cube':
                 entity = this.editor.addCube({
@@ -162,7 +189,6 @@
                     color: data.color || 0x4a9eff
                 });
                 break;
-
             case 'sphere':
                 entity = this.editor.addSphere({
                     radius: data.radius || 0.5,
@@ -170,7 +196,6 @@
                     color: data.color || 0xff6b6b
                 });
                 break;
-
             case 'cylinder':
                 entity = this.editor.addCylinder({
                     radiusTop: data.radiusTop || 0.5,
@@ -180,7 +205,6 @@
                     color: data.color || 0x51cf66
                 });
                 break;
-
             default:
                 console.warn('Unknown entity type:', data.type);
                 return null;
@@ -188,7 +212,6 @@
 
         if (!entity) return null;
 
-        // Восстанавливаем трансформации
         if (data.position) {
             entity.position.set(data.position.x, data.position.y, data.position.z);
         }
@@ -199,14 +222,12 @@
             entity.scale.set(data.scale.x, data.scale.y, data.scale.z);
         }
 
-        // Восстанавливаем прозрачность
         if (entity.material && data.opacity !== undefined) {
             entity.material.transparent = data.transparent !== undefined ? data.transparent : data.opacity < 1;
             entity.material.opacity = data.opacity;
             entity.material.needsUpdate = true;
         }
 
-        // Устанавливаем правильный ID
         if (data.id) {
             entity.userData.id = data.id;
             this.editor.entityIdCounter = Math.max(this.editor.entityIdCounter, data.id);
@@ -217,23 +238,23 @@
 
     /**
      * Добавляет новый снимок в историю
-     * @param {string} actionName - Название действия
      */
     push(actionName = 'unknown') {
-        // Если мы не в режиме восстановления, сохраняем состояние
         if (this.isRestoring) return;
+
+        // Если мы в группе, не создаем отдельные снимки
+        if (this.isInGroup) {
+            console.log(`📝 Adding to group: ${actionName}`);
+            return;
+        }
 
         const state = this.captureState(actionName);
         if (!state) return;
 
-        // Обрезаем историю до текущего индекса (если были откаты)
         this.history = this.history.slice(0, this.currentIndex + 1);
-
-        // Добавляем новый снимок
         this.history.push(state);
         this.currentIndex = this.history.length - 1;
 
-        // Ограничиваем размер истории
         if (this.history.length > this.maxSteps) {
             const removeCount = this.history.length - this.maxSteps;
             this.history.splice(0, removeCount);
@@ -241,9 +262,6 @@
         }
 
         console.log(`📝 History: ${this.history.length} steps (${actionName})`);
-
-        // Для будущей БД: здесь будет сохранение в базу данных
-        // this.saveToDatabase();
     }
 
     /**
@@ -253,6 +271,11 @@
         if (this.currentIndex <= 0) {
             console.log('⛔ Cannot undo: at beginning of history');
             return;
+        }
+
+        // Если мы в группе, выходим из нее
+        if (this.isInGroup) {
+            this.endGroup();
         }
 
         this.currentIndex--;
@@ -276,26 +299,14 @@
         console.log(`➡️ Redo: step ${this.currentIndex + 1}/${this.history.length}`);
     }
 
-    /**
-     * Проверяет, можно ли сделать Undo
-     * @returns {boolean}
-     */
     canUndo() {
         return this.currentIndex > 0;
     }
 
-    /**
-     * Проверяет, можно ли сделать Redo
-     * @returns {boolean}
-     */
     canRedo() {
         return this.currentIndex < this.history.length - 1;
     }
 
-    /**
-     * Получает информацию о текущем состоянии истории
-     * @returns {Object}
-     */
     getInfo() {
         return {
             totalSteps: this.history.length,
@@ -306,17 +317,11 @@
     }
 
     /**
-     * 🗄️ ЭКСПОРТ В БУДУЩУЮ БАЗУ ДАННЫХ
-     * 
-     * ⚠️ ВНИМАНИЕ: Этот метод предназначен для будущей интеграции с БД
-     * Сейчас он сохраняет историю в JSON файл на сервере
-     * 
-     * @todo При подключении базы данных, заменить на сохранение в БД
-     * @returns {Object} Данные истории для сохранения
+     * Экспорт истории
      */
     exportHistory() {
         return {
-            version: '1.0',
+            version: '1.1',
             createdAt: new Date().toISOString(),
             history: this.history,
             currentIndex: this.currentIndex,
@@ -325,12 +330,7 @@
     }
 
     /**
-     * 🗄️ ИМПОРТ ИЗ БУДУЩЕЙ БАЗЫ ДАННЫХ
-     * 
-     * ⚠️ ВНИМАНИЕ: Этот метод предназначен для будущей интеграции с БД
-     * Сейчас он загружает историю из JSON файла
-     * 
-     * @param {Object} data - Данные истории для загрузки
+     * Импорт истории
      */
     importHistory(data) {
         if (!data || !data.history || data.history.length === 0) {
@@ -342,7 +342,6 @@
         this.currentIndex = data.currentIndex !== undefined ? data.currentIndex : this.history.length - 1;
         this.maxSteps = data.maxSteps || this.maxSteps;
 
-        // Восстанавливаем последнее состояние
         if (this.currentIndex >= 0 && this.currentIndex < this.history.length) {
             this.restoreState(this.history[this.currentIndex]);
         }
@@ -356,12 +355,14 @@
     clear() {
         this.history = [];
         this.currentIndex = -1;
+        this.groupStack = [];
+        this.isInGroup = false;
+        this.groupName = null;
         console.log('🧹 History cleared');
     }
 
     /**
      * Сохраняет текущее состояние как начальное
-     * Используется при создании новой сцены
      */
     saveInitialState() {
         this.clear();

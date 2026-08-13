@@ -1,71 +1,109 @@
-import { Tool } from './Tool.js';
+/**
+ * 🔧 RotateTool - Инструмент вращения
+ *
+ * @version 1.1.0
+ * @author Gabryelf
+ * @since 0.1.0
+ */
+ import { Tool } from './Tool.js';
 
-export class RotateTool extends Tool {
-    constructor(editor) {
-        super(editor);
-        this.name = 'Rotate';
-        this.icon = '🔄';
-        this.shortcut = '4';
-        this.gizmoService = null;
-        this.snapAngle = Math.PI / 8; // 22.5 градусов по умолчанию
-    }
-
-    onActivate() {
-        console.log('🔧 Rotate Tool activated');
-        this.editor.getRenderer().domElement.style.cursor = 'pointer';
-        
-        if (!this.gizmoService) {
-            this.gizmoService = this.editor.gizmoService;
-        }
-
-        if (!this.gizmoService) {
-            console.error('❌ GizmoService not found');
-            return;
-        }
-
-        // Устанавливаем режим Rotate с привязкой
-        this.gizmoService.setMode('rotate');
-        this.gizmoService.setRotationSnap(this.snapAngle);
-
-        const selected = this.editor.selectionManager.getSelected();
-        if (selected) {
-            this.gizmoService.attach(selected);
-        } else {
-            this.gizmoService.detach();
-        }
-    }
-
-    onDeactivate() {
-        console.log('🔧 Rotate Tool deactivated');
-        if (this.gizmoService) {
-            this.gizmoService.detach();
-        }
-        this.editor.getRenderer().domElement.style.cursor = 'default';
-    }
-
-    onUpdate() {
-        if (this.gizmoService) {
-            this.gizmoService.update();
-        }
-    }
-
-    onSelectionChanged(entity) {
-        if (!this.isActive) return;
-        
-        if (entity) {
-            this.gizmoService?.attach(entity);
-            // Восстанавливаем привязку
-            this.gizmoService?.setRotationSnap(this.snapAngle);
-        } else {
-            this.gizmoService?.detach();
-        }
-    }
-
-    // Установка привязки углов
-    setSnapAngle(degrees) {
-        this.snapAngle = degrees * Math.PI / 180;
-        if (this.gizmoService) {
-            this.gizmoService.setRotationSnap(this.snapAngle);
-        }
-    }
-}
+ export class RotateTool extends Tool {
+     constructor(editor) {
+         super(editor);
+         this.name = 'Rotate';
+         this.icon = '🔄';
+         this.shortcut = '4';
+         this.gizmoService = null;
+         this.snapAngle = Math.PI / 8;
+         this.isDragging = false;
+         this.dragStartRotation = null;
+         this.draggedEntity = null;
+         this._gizmoListenerAdded = false;
+     }
+ 
+     onActivate() {
+         console.log('🔧 Rotate Tool activated');
+         this.editor.getRenderer().domElement.style.cursor = 'pointer';
+ 
+         if (!this.gizmoService) {
+             this.gizmoService = this.editor.gizmoService;
+         }
+         if (!this.gizmoService) {
+             console.error('❌ GizmoService not found');
+             return;
+         }
+ 
+         this.gizmoService.setMode('rotate');
+         this.gizmoService.setRotationSnap(this.snapAngle);
+ 
+         // 🔥 Добавляем слушатель для записи в историю
+         if (!this._gizmoListenerAdded) {
+             this.gizmoService.addListener((event, value) => {
+                 if (event === 'dragging') {
+                     if (value) {
+                         this.isDragging = true;
+                         this.draggedEntity = this.editor.selectionManager.getSelected();
+                         if (this.draggedEntity) {
+                             this.dragStartRotation = this.draggedEntity.rotation.clone();
+                             this.editor.historyManager.captureState('before_rotate');
+                         }
+                     } else {
+                         this.isDragging = false;
+                         if (this.draggedEntity && this.dragStartRotation) {
+                             const currentRot = this.draggedEntity.rotation;
+                             const angle = this.dragStartRotation.distanceTo(currentRot);
+                             if (angle > 0.001) {
+                                 this.editor.historyManager.push('rotate');
+                                 console.log(`📝 Rotation recorded: ${(angle * 180 / Math.PI).toFixed(2)}°`);
+                             }
+                         }
+                         this.dragStartRotation = null;
+                         this.draggedEntity = null;
+                     }
+                 }
+             });
+             this._gizmoListenerAdded = true;
+         }
+ 
+         const selected = this.editor.selectionManager.getSelected();
+         if (selected) {
+             this.gizmoService.attach(selected);
+         } else {
+             this.gizmoService.detach();
+         }
+     }
+ 
+     onDeactivate() {
+         console.log('🔧 Rotate Tool deactivated');
+         if (this.gizmoService) {
+             this.gizmoService.detach();
+         }
+         this.editor.getRenderer().domElement.style.cursor = 'default';
+         this.isDragging = false;
+         this.dragStartRotation = null;
+         this.draggedEntity = null;
+     }
+ 
+     onUpdate() {
+         if (this.gizmoService) {
+             this.gizmoService.update();
+         }
+     }
+ 
+     onSelectionChanged(entity) {
+         if (!this.isActive) return;
+         if (entity) {
+             this.gizmoService?.attach(entity);
+             this.gizmoService?.setRotationSnap(this.snapAngle);
+         } else {
+             this.gizmoService?.detach();
+         }
+     }
+ 
+     setSnapAngle(degrees) {
+         this.snapAngle = degrees * Math.PI / 180;
+         if (this.gizmoService) {
+             this.gizmoService.setRotationSnap(this.snapAngle);
+         }
+     }
+ }

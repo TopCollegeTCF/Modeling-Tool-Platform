@@ -7,6 +7,19 @@
   <img src="https://img.shields.io/badge/Module-ES6%20import-6a5acd?style=for-the-badge"/>
 </div>
 
+## Скриншоты версии 0.0.8 - 0.1.2
+
+![Window](https://github.com/TopCollegeTCF/WikiOrganizatom/blob/main/docs/screens/Modeling-Tool-Platform/2026-08-12_22-56-45.png)
+
+![Window](https://github.com/TopCollegeTCF/WikiOrganizatom/blob/main/docs/screens/Modeling-Tool-Platform/2026-08-12_22-57-40.png)
+
+![Window](https://github.com/TopCollegeTCF/WikiOrganizatom/blob/main/docs/screens/Modeling-Tool-Platform/2026-08-12_22-58-18.png)
+
+![Window](https://github.com/TopCollegeTCF/WikiOrganizatom/blob/main/docs/screens/Modeling-Tool-Platform/2026-08-12_22-58-38.png)
+
+![Window](https://github.com/TopCollegeTCF/WikiOrganizatom/blob/main/docs/screens/Modeling-Tool-Platform/2026-08-12_22-58-57.png)
+
+![Window](https://github.com/TopCollegeTCF/WikiOrganizatom/blob/main/docs/screens/Modeling-Tool-Platform/2026-08-12_22-59-15.png)
 
 ## Скриншоты версии 0.0.5 - 0.0.7
 

@@ -1,13 +1,19 @@
 /**
  * 📐 PropertiesUI - Панель свойств объекта
  *
- * @version 1.1.0
- * @author Gabryelf
- * @since 0.1.0
  */
  import { UI_TEMPLATES, renderTemplate } from '../configs/ui-templates.js';
  import { ICONS } from '../configs/icons.js';
  import { COLORS } from '../configs/colors.js';
+ import {
+     MoveCommand,
+     RotateCommand,
+     ScaleCommand,
+     ChangeColorCommand,
+     ChangeOpacityCommand,
+     ChangeNameCommand,
+     SegmentsChangeCommand
+ } from '../core/CommandManager.js';
  
  export class PropertiesUI {
      constructor(editor) {
@@ -133,12 +139,14 @@
              opacity = selected.material.opacity || 1;
          }
  
+         // Name input
          html += renderTemplate(UI_TEMPLATES.properties.nameInput, {
              name: name,
              inputStyle: inputStyle,
              labelStyle: labelStyle,
          });
  
+         // Appearance
          html += renderTemplate(UI_TEMPLATES.properties.appearance, {
              surfaceLight: colors.surfaceLight,
              borderColor: colors.input.border,
@@ -149,6 +157,7 @@
              opacityPercent: Math.round(opacity * 100),
          });
  
+         // Transform inputs
          const renderTransform = (prop, values, step, extra = '') => {
              const inputs = ['x', 'y', 'z'].map(axis => {
                  const val = values[axis] !== undefined ? values[axis] : 0;
@@ -172,11 +181,114 @@
          html += renderTransform('rotation', { x: rot.x * 180 / Math.PI, y: rot.y * 180 / Math.PI, z: rot.z * 180 / Math.PI }, 1);
          html += renderTransform('scale', { x: scale.x, y: scale.y, z: scale.z }, 0.1, 'min="0.01"');
  
+         // === СЕКЦИЯ: Параметры геометрии ===
+         const type = selected.userData.type;
+         let geometryHtml = '';
+ 
+         if (type === 'cube' && typeof selected.getSegments === 'function') {
+             const segs = selected.getSegments();
+             const range = selected.getSegmentsRange();
+             geometryHtml += `
+                 <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid ${colors.border};">
+                     <label style="${labelStyle}">🔲 Geometry</label>
+                     <div style="margin-bottom: 4px;">
+                         <label style="color:${colors.text.muted}; font-size:8px;">Segments</label>
+                         <input type="range" id="prop-segments"
+                                min="${range.min}" max="${range.max}" step="1" value="${segs}"
+                                style="width:100%; margin:2px 0; height:3px;
+                                       background:${colors.input.border}; border-radius:2px;
+                                       -webkit-appearance:none; appearance:none; cursor:pointer;">
+                         <div style="display:flex; justify-content:space-between; font-size:7px; color:${colors.text.muted};">
+                             <span>Low (${range.min})</span>
+                             <span id="segments-value" style="color:${colors.text.primary};">${segs}</span>
+                             <span>High (${range.max})</span>
+                         </div>
+                     </div>
+                 </div>
+             `;
+         }
+ 
+         if (type === 'sphere' && typeof selected.getSegments === 'function') {
+             const segs = selected.getSegments();
+             const range = selected.getSegmentsRange();
+             geometryHtml += `
+                 <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid ${colors.border};">
+                     <label style="${labelStyle}">⚪ Smoothness</label>
+                     <div style="margin-bottom: 4px;">
+                         <label style="color:${colors.text.muted}; font-size:8px;">Horizontal</label>
+                         <input type="range" id="prop-width-segments"
+                                min="${range.min}" max="${range.max}" step="1" value="${segs.width}"
+                                style="width:100%; margin:2px 0; height:3px;
+                                       background:${colors.input.border}; border-radius:2px;
+                                       -webkit-appearance:none; appearance:none; cursor:pointer;">
+                         <div style="display:flex; justify-content:space-between; font-size:7px; color:${colors.text.muted};">
+                             <span>Low</span>
+                             <span id="width-segments-value" style="color:${colors.text.primary};">${segs.width}</span>
+                             <span>High</span>
+                         </div>
+                     </div>
+                     <div>
+                         <label style="color:${colors.text.muted}; font-size:8px;">Vertical</label>
+                         <input type="range" id="prop-height-segments"
+                                min="${range.min}" max="${range.max}" step="1" value="${segs.height}"
+                                style="width:100%; margin:2px 0; height:3px;
+                                       background:${colors.input.border}; border-radius:2px;
+                                       -webkit-appearance:none; appearance:none; cursor:pointer;">
+                         <div style="display:flex; justify-content:space-between; font-size:7px; color:${colors.text.muted};">
+                             <span>Low</span>
+                             <span id="height-segments-value" style="color:${colors.text.primary};">${segs.height}</span>
+                             <span>High</span>
+                         </div>
+                     </div>
+                 </div>
+             `;
+         }
+ 
+         if (type === 'cylinder' && typeof selected.getSegments === 'function') {
+             const segs = selected.getSegments();
+             const range = selected.getSegmentsRange();
+             geometryHtml += `
+                 <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid ${colors.border};">
+                     <label style="${labelStyle}">🔄 Smoothness</label>
+                     <div style="margin-bottom: 4px;">
+                         <label style="color:${colors.text.muted}; font-size:8px;">Radial</label>
+                         <input type="range" id="prop-radial-segments"
+                                min="${range.radial.min}" max="${range.radial.max}" step="1" value="${segs.radial}"
+                                style="width:100%; margin:2px 0; height:3px;
+                                       background:${colors.input.border}; border-radius:2px;
+                                       -webkit-appearance:none; appearance:none; cursor:pointer;">
+                         <div style="display:flex; justify-content:space-between; font-size:7px; color:${colors.text.muted};">
+                             <span>Low</span>
+                             <span id="radial-segments-value" style="color:${colors.text.primary};">${segs.radial}</span>
+                             <span>High</span>
+                         </div>
+                     </div>
+                     <div>
+                         <label style="color:${colors.text.muted}; font-size:8px;">Height</label>
+                         <input type="range" id="prop-cylinder-height-segments"
+                                min="${range.height.min}" max="${range.height.max}" step="1" value="${segs.height}"
+                                style="width:100%; margin:2px 0; height:3px;
+                                       background:${colors.input.border}; border-radius:2px;
+                                       -webkit-appearance:none; appearance:none; cursor:pointer;">
+                         <div style="display:flex; justify-content:space-between; font-size:7px; color:${colors.text.muted};">
+                             <span>Low</span>
+                             <span id="cylinder-height-segments-value" style="color:${colors.text.primary};">${segs.height}</span>
+                             <span>High</span>
+                         </div>
+                     </div>
+                 </div>
+             `;
+         }
+ 
+         html += geometryHtml;
+ 
          this.element.innerHTML = html;
  
+         // Настраиваем обработчики
          this.setupPropertyHandlers(selected);
          this.setupColorHandlers(selected);
          this.setupOpacityHandlers(selected);
+         this.setupGeometryHandlers(selected);
  
          const nameInput = this.element.querySelector('#prop-name');
          if (nameInput) {
@@ -185,18 +297,26 @@
                  selected.userData.name = nameInput.value;
                  this.editor.uiManager.sceneTree.update();
                  if (oldName !== nameInput.value) {
-                     this.editor.historyManager.push('changeName');
+                     const command = new ChangeNameCommand(this.editor, {
+                         entityId: selected.userData.id,
+                         oldName: oldName,
+                         newName: nameInput.value
+                     });
+                     this.editor.commandManager.execute(command);
                  }
              });
          }
      }
  
+     /**
+      * Настраивает обработчики для полей трансформации (position, rotation, scale)
+      */
      setupPropertyHandlers(entity) {
          this.element.querySelectorAll('.prop-input').forEach(input => {
              const prop = input.dataset.prop;
              const axis = input.dataset.axis;
-             let changeTimer = null;
              let oldValue = null;
+             let changeTimer = null;
  
              const getCurrentValue = () => {
                  if (prop === 'position') return entity.position[axis];
@@ -205,7 +325,23 @@
                  return null;
              };
  
-             const update = () => {
+             const onFocus = () => {
+                 oldValue = getCurrentValue();
+             };
+ 
+             const onBlur = () => {
+                 if (changeTimer) {
+                     clearTimeout(changeTimer);
+                     changeTimer = null;
+                 }
+                 const newValue = getCurrentValue();
+                 if (oldValue !== null && newValue !== null && Math.abs(newValue - oldValue) > 0.0001) {
+                     this.createPropertyCommand(entity, prop, axis, oldValue, newValue);
+                 }
+                 oldValue = null;
+             };
+ 
+             const onInput = () => {
                  const value = parseFloat(input.value);
                  if (isNaN(value)) return;
  
@@ -217,42 +353,62 @@
                      entity.scale[axis] = Math.max(0.01, value);
                  }
  
-                 // 🔥 Записываем в историю с дебаунсом
                  if (changeTimer) clearTimeout(changeTimer);
                  changeTimer = setTimeout(() => {
                      const newValue = getCurrentValue();
-                     if (oldValue !== null && Math.abs(newValue - oldValue) > 0.0001) {
-                         this.editor.historyManager.push(`propertyChange_${prop}`);
+                     if (oldValue !== null && newValue !== null && Math.abs(newValue - oldValue) > 0.0001) {
+                         this.createPropertyCommand(entity, prop, axis, oldValue, newValue);
                          oldValue = newValue;
                      }
                      changeTimer = null;
-                 }, 300);
-             };
- 
-             const onFocus = () => {
-                 oldValue = getCurrentValue();
-                 this.editor.historyManager.captureState(`before_${prop}_${axis}`);
-             };
- 
-             const onBlur = () => {
-                 if (changeTimer) {
-                     clearTimeout(changeTimer);
-                     changeTimer = null;
-                 }
-                 const newValue = getCurrentValue();
-                 if (oldValue !== null && Math.abs(newValue - oldValue) > 0.0001) {
-                     this.editor.historyManager.push(`propertyChange_${prop}`);
-                 }
-                 oldValue = null;
+                 }, 500);
              };
  
              input.addEventListener('focus', onFocus);
-             input.addEventListener('change', update);
-             input.addEventListener('input', update);
+             input.addEventListener('input', onInput);
              input.addEventListener('blur', onBlur);
          });
      }
  
+     /**
+      * Создает команду для изменения свойства
+      */
+     createPropertyCommand(entity, prop, axis, oldValue, newValue) {
+         let command = null;
+         const entityId = entity.userData.id;
+ 
+         if (prop === 'position') {
+             const pos = entity.position.clone();
+             command = new MoveCommand(this.editor, {
+                 entityId: entityId,
+                 oldPosition: { x: pos.x, y: pos.y, z: pos.z },
+                 newPosition: { x: pos.x, y: pos.y, z: pos.z }
+             });
+         } else if (prop === 'rotation') {
+             const rot = entity.rotation.clone();
+             command = new RotateCommand(this.editor, {
+                 entityId: entityId,
+                 oldRotation: { x: rot.x, y: rot.y, z: rot.z },
+                 newRotation: { x: rot.x, y: rot.y, z: rot.z }
+             });
+         } else if (prop === 'scale') {
+             const scale = entity.scale.clone();
+             command = new ScaleCommand(this.editor, {
+                 entityId: entityId,
+                 oldScale: { x: scale.x, y: scale.y, z: scale.z },
+                 newScale: { x: scale.x, y: scale.y, z: scale.z }
+             });
+         }
+ 
+         if (command) {
+             this.editor.commandManager.execute(command);
+             console.log(`📝 Property command: ${prop} changed`);
+         }
+     }
+ 
+     /**
+      * Настраивает обработчик для выбора цвета
+      */
      setupColorHandlers(entity) {
          const colorInput = this.element.querySelector('#prop-color');
          if (!colorInput) return;
@@ -261,7 +417,6 @@
  
          colorInput.addEventListener('focus', () => {
              oldColor = entity.material?.color?.getHex() || 0;
-             this.editor.historyManager.captureState('before_colorChange');
          });
  
          colorInput.addEventListener('input', () => {
@@ -276,11 +431,20 @@
          colorInput.addEventListener('blur', () => {
              const newColor = entity.material?.color?.getHex() || 0;
              if (oldColor !== newColor) {
-                 this.editor.historyManager.push('colorChange');
+                 const command = new ChangeColorCommand(this.editor, {
+                     entityId: entity.userData.id,
+                     oldColor: oldColor,
+                     newColor: newColor
+                 });
+                 this.editor.commandManager.execute(command);
+                 console.log(`🎨 Color changed: ${oldColor.toString(16)} → ${newColor.toString(16)}`);
              }
          });
      }
  
+     /**
+      * Настраивает обработчик для прозрачности
+      */
      setupOpacityHandlers(entity) {
          const opacityInput = this.element.querySelector('#prop-opacity');
          const opacityValue = this.element.querySelector('#opacity-value');
@@ -290,7 +454,6 @@
  
          opacityInput.addEventListener('focus', () => {
              oldOpacity = entity.material?.opacity || 1;
-             this.editor.historyManager.captureState('before_opacityChange');
          });
  
          opacityInput.addEventListener('input', () => {
@@ -308,9 +471,168 @@
          opacityInput.addEventListener('blur', () => {
              const newOpacity = entity.material?.opacity || 1;
              if (Math.abs(oldOpacity - newOpacity) > 0.001) {
-                 this.editor.historyManager.push('opacityChange');
+                 const command = new ChangeOpacityCommand(this.editor, {
+                     entityId: entity.userData.id,
+                     oldOpacity: oldOpacity,
+                     newOpacity: newOpacity
+                 });
+                 this.editor.commandManager.execute(command);
+                 console.log(`🔆 Opacity changed: ${oldOpacity} → ${newOpacity}`);
              }
          });
+     }
+ 
+     /**
+      * Настраивает обработчики для параметров геометрии
+      */
+     setupGeometryHandlers(entity) {
+         const type = entity.userData.type;
+ 
+         if (type === 'cube' && typeof entity.setSegments === 'function') {
+             this.setupCubeSegmentsHandler(entity);
+         } else if (type === 'sphere' && typeof entity.setSegments === 'function') {
+             this.setupSphereSegmentsHandler(entity);
+         } else if (type === 'cylinder' && typeof entity.setSegments === 'function') {
+             this.setupCylinderSegmentsHandler(entity);
+         }
+     }
+ 
+     /**
+      * Настраивает обработчик для сегментов куба
+      */
+     setupCubeSegmentsHandler(entity) {
+         const input = this.element.querySelector('#prop-segments');
+         const valueDisplay = this.element.querySelector('#segments-value');
+         if (!input) return;
+ 
+         let oldValue = entity.getSegments();
+ 
+         input.addEventListener('focus', () => {
+             oldValue = entity.getSegments();
+         });
+ 
+         input.addEventListener('input', () => {
+             const value = parseInt(input.value);
+             entity.setSegments(value);
+             if (valueDisplay) valueDisplay.textContent = value;
+             this.editor.uiManager.updateUI();
+         });
+ 
+         input.addEventListener('blur', () => {
+             const newValue = entity.getSegments();
+             if (oldValue !== newValue) {
+                 const command = new SegmentsChangeCommand(this.editor, {
+                     entityId: entity.userData.id,
+                     oldSegments: oldValue,
+                     newSegments: newValue,
+                     entityType: 'cube'
+                 });
+                 this.editor.commandManager.execute(command);
+                 console.log(`📝 Cube segments changed: ${oldValue} → ${newValue}`);
+             }
+         });
+     }
+ 
+     /**
+      * Настраивает обработчик для сегментов сферы
+      */
+     setupSphereSegmentsHandler(entity) {
+         const widthInput = this.element.querySelector('#prop-width-segments');
+         const heightInput = this.element.querySelector('#prop-height-segments');
+         const widthDisplay = this.element.querySelector('#width-segments-value');
+         const heightDisplay = this.element.querySelector('#height-segments-value');
+ 
+         if (!widthInput || !heightInput) return;
+ 
+         let oldWidth = entity.getSegments().width;
+         let oldHeight = entity.getSegments().height;
+ 
+         const handleFocus = () => {
+             const segs = entity.getSegments();
+             oldWidth = segs.width;
+             oldHeight = segs.height;
+         };
+ 
+         const handleChange = () => {
+             const w = parseInt(widthInput.value);
+             const h = parseInt(heightInput.value);
+             entity.setSegments(w, h);
+             if (widthDisplay) widthDisplay.textContent = w;
+             if (heightDisplay) heightDisplay.textContent = h;
+             this.editor.uiManager.updateUI();
+         };
+ 
+         const handleBlur = () => {
+             const segs = entity.getSegments();
+             if (oldWidth !== segs.width || oldHeight !== segs.height) {
+                 const command = new SegmentsChangeCommand(this.editor, {
+                     entityId: entity.userData.id,
+                     oldSegments: { width: oldWidth, height: oldHeight },
+                     newSegments: { width: segs.width, height: segs.height },
+                     entityType: 'sphere'
+                 });
+                 this.editor.commandManager.execute(command);
+                 console.log(`📝 Sphere segments changed: width ${oldWidth}→${segs.width}, height ${oldHeight}→${segs.height}`);
+             }
+         };
+ 
+         widthInput.addEventListener('focus', handleFocus);
+         heightInput.addEventListener('focus', handleFocus);
+         widthInput.addEventListener('input', handleChange);
+         heightInput.addEventListener('input', handleChange);
+         widthInput.addEventListener('blur', handleBlur);
+         heightInput.addEventListener('blur', handleBlur);
+     }
+ 
+     /**
+      * Настраивает обработчик для сегментов цилиндра
+      */
+     setupCylinderSegmentsHandler(entity) {
+         const radialInput = this.element.querySelector('#prop-radial-segments');
+         const heightInput = this.element.querySelector('#prop-cylinder-height-segments');
+         const radialDisplay = this.element.querySelector('#radial-segments-value');
+         const heightDisplay = this.element.querySelector('#cylinder-height-segments-value');
+ 
+         if (!radialInput || !heightInput) return;
+ 
+         let oldRadial = entity.getSegments().radial;
+         let oldHeight = entity.getSegments().height;
+ 
+         const handleFocus = () => {
+             const segs = entity.getSegments();
+             oldRadial = segs.radial;
+             oldHeight = segs.height;
+         };
+ 
+         const handleChange = () => {
+             const r = parseInt(radialInput.value);
+             const h = parseInt(heightInput.value);
+             entity.setSegments(r, h);
+             if (radialDisplay) radialDisplay.textContent = r;
+             if (heightDisplay) heightDisplay.textContent = h;
+             this.editor.uiManager.updateUI();
+         };
+ 
+         const handleBlur = () => {
+             const segs = entity.getSegments();
+             if (oldRadial !== segs.radial || oldHeight !== segs.height) {
+                 const command = new SegmentsChangeCommand(this.editor, {
+                     entityId: entity.userData.id,
+                     oldSegments: { radial: oldRadial, height: oldHeight },
+                     newSegments: { radial: segs.radial, height: segs.height },
+                     entityType: 'cylinder'
+                 });
+                 this.editor.commandManager.execute(command);
+                 console.log(`📝 Cylinder segments changed: radial ${oldRadial}→${segs.radial}, height ${oldHeight}→${segs.height}`);
+             }
+         };
+ 
+         radialInput.addEventListener('focus', handleFocus);
+         heightInput.addEventListener('focus', handleFocus);
+         radialInput.addEventListener('input', handleChange);
+         heightInput.addEventListener('input', handleChange);
+         radialInput.addEventListener('blur', handleBlur);
+         heightInput.addEventListener('blur', handleBlur);
      }
  
      updateTheme(theme) {

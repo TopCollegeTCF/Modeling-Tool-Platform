@@ -5,30 +5,32 @@ export const DEFAULTS = {
         position: { x: 0, y: 0.5, z: 0 },
         offset: 1.5,
     },
-    
     // Настройки фигур
     shapes: {
         cube: {
             width: 1,
             height: 1,
             depth: 1,
+            segments: 1,
         },
         sphere: {
             radius: 0.5,
+            widthSegments: 32,
+            heightSegments: 32,
         },
         cylinder: {
             radiusTop: 0.5,
             radiusBottom: 0.5,
             height: 1,
+            radialSegments: 32, 
+            heightSegments: 1,  
         },
     },
-    
     // Настройки сетки
     grid: {
         size: 20,
         divisions: 20,
     },
-    
     // Настройки трансформации
     transform: {
         snap: 0.1,

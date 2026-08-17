@@ -4,9 +4,7 @@
  * 📋 ОПИСАНИЕ:
  * Отвечает за создание и управление фигурами в сцене.
  * Реализует фабричный метод для создания различных типов фигур.
- * 
- * @version 0.0.2
- * @author Gabryelf
+ *
  */
 import { Cube } from '../entities/Cube.js';
 import { Sphere } from '../entities/Sphere.js';
@@ -20,8 +18,6 @@ export class ShapeManager {
             cube: this.createCube.bind(this),
             sphere: this.createSphere.bind(this),
             cylinder: this.createCylinder.bind(this),
-
-            // заглушки для новых фигур
             cone: this.createCone.bind(this),
             torus: this.createTorus.bind(this),
             torusKnot: this.createTorusKnot.bind(this),
@@ -31,16 +27,6 @@ export class ShapeManager {
         };
     }
 
-    /**
-     * Создает куб
-     * @param {Object} options - параметры куба
-     * @param {number} options.width - ширина
-     * @param {number} options.height - высота
-     * @param {number} options.depth - глубина
-     * @param {string} options.name - имя
-     * @param {number} options.color - цвет
-     * @returns {Cube} Созданный куб
-     */
     createCube(options = {}) {
         const config = {
             width: options.width || DEFAULTS.shapes.cube.width,
@@ -50,6 +36,9 @@ export class ShapeManager {
             color: options.color || 0x4a9eff,
             roughness: options.roughness || 0.3,
             metalness: options.metalness || 0.1,
+            segments: options.segments || 1,
+            transparent: options.transparent || false,
+            opacity: options.opacity || 1,
         };
 
         const cube = new Cube(config.width, config.height, config.depth, {
@@ -57,20 +46,15 @@ export class ShapeManager {
             color: config.color,
             roughness: config.roughness,
             metalness: config.metalness,
+            segments: config.segments,
+            transparent: config.transparent,
+            opacity: config.opacity,
         });
 
         this._setupEntity(cube);
         return cube;
     }
 
-    /**
-     * Создает сферу
-     * @param {Object} options - параметры сферы
-     * @param {number} options.radius - радиус
-     * @param {string} options.name - имя
-     * @param {number} options.color - цвет
-     * @returns {Sphere} Созданная сфера
-     */
     createSphere(options = {}) {
         const config = {
             radius: options.radius || DEFAULTS.shapes.sphere.radius,
@@ -78,6 +62,10 @@ export class ShapeManager {
             color: options.color || 0xff6b6b,
             roughness: options.roughness || 0.3,
             metalness: options.metalness || 0.1,
+            widthSegments: options.widthSegments || 32,
+            heightSegments: options.heightSegments || 32,
+            transparent: options.transparent || false,
+            opacity: options.opacity || 1,
         };
 
         const sphere = new Sphere(config.radius, {
@@ -85,22 +73,16 @@ export class ShapeManager {
             color: config.color,
             roughness: config.roughness,
             metalness: config.metalness,
+            widthSegments: config.widthSegments,
+            heightSegments: config.heightSegments,
+            transparent: config.transparent,
+            opacity: config.opacity,
         });
 
         this._setupEntity(sphere);
         return sphere;
     }
 
-    /**
-     * Создает цилиндр
-     * @param {Object} options - параметры цилиндра
-     * @param {number} options.radiusTop - верхний радиус
-     * @param {number} options.radiusBottom - нижний радиус
-     * @param {number} options.height - высота
-     * @param {string} options.name - имя
-     * @param {number} options.color - цвет
-     * @returns {Cylinder} Созданный цилиндр
-     */
     createCylinder(options = {}) {
         const config = {
             radiusTop: options.radiusTop || DEFAULTS.shapes.cylinder.radiusTop,
@@ -110,6 +92,11 @@ export class ShapeManager {
             color: options.color || 0x51cf66,
             roughness: options.roughness || 0.3,
             metalness: options.metalness || 0.1,
+            radialSegments: options.radialSegments || 32,
+            heightSegments: options.heightSegments || 1,
+            openEnded: options.openEnded || false,
+            transparent: options.transparent || false,
+            opacity: options.opacity || 1,
         };
 
         const cylinder = new Cylinder(
@@ -121,6 +108,11 @@ export class ShapeManager {
                 color: config.color,
                 roughness: config.roughness,
                 metalness: config.metalness,
+                radialSegments: config.radialSegments,
+                heightSegments: config.heightSegments,
+                openEnded: config.openEnded,
+                transparent: config.transparent,
+                opacity: config.opacity,
             }
         );
 
@@ -128,12 +120,6 @@ export class ShapeManager {
         return cylinder;
     }
 
-    /**
-     * Создает фигуру по типу
-     * @param {string} type - тип фигуры ('cube', 'sphere', 'cylinder')
-     * @param {Object} options - параметры фигуры
-     * @returns {Entity} Созданная фигура
-     */
     createShape(type, options = {}) {
         const factory = this.shapeFactories[type];
         if (!factory) {
@@ -145,38 +131,28 @@ export class ShapeManager {
 
     /**
      * Настраивает сущность перед добавлением на сцену
-     * @param {Entity} entity - сущность для настройки
-     * @private
      */
+
     _setupEntity(entity) {
-        // Устанавливаем ID
+        const isRestoring = this.editor.historyManager?.isRestoring || false;
+
         this.editor.entityIdCounter++;
         entity.userData.id = this.editor.entityIdCounter;
 
-        // Устанавливаем позицию спавна
         const pos = this.editor.spawnService.getSpawnPosition();
         entity.position.copy(pos);
 
-        // Добавляем на сцену
         this.editor.sceneManager.addEntity(entity);
 
-        // Выделяем созданную фигуру
-        this.editor.selectionManager.select(entity);
+        if (!isRestoring) {
+            this.editor.selectionManager.select(entity);
+        }
 
-        // Обновляем UI
         this.editor.uiManager.updateUI();
-
-        // Записываем в историю
-        this.editor.historyManager.push(`add ${entity.userData.type}`);
 
         console.log(`✅ ${entity.userData.type} created (id: ${entity.userData.id})`);
         return entity;
     }
-
-    /**
-     * Получает информацию о доступных типах фигур
-     * @returns {Object} Информация о типах фигур
-     */
     getShapeInfo() {
         return {
             types: Object.keys(this.shapeFactories),
@@ -184,34 +160,69 @@ export class ShapeManager {
         };
     }
 
-     // Заглушки для новых фигур (временные, пока не реализованы)
-     createCone(options = {}) {
+    // Заглушки для новых фигур
+    createCone(options = {}) {
         console.warn('⚠️ Cone shape not implemented yet');
-        return this.createCylinder({ ...options, radiusTop: 0, height: 1.5 });
+        return this.createCylinder({
+            ...options,
+            radiusTop: 0,
+            height: 1.5,
+            radialSegments: options.radialSegments || 32,
+            heightSegments: options.heightSegments || 1,
+        });
     }
 
     createTorus(options = {}) {
         console.warn('⚠️ Torus shape not implemented yet');
-        return this.createSphere({ ...options, radius: 0.8 });
+        return this.createSphere({
+            ...options,
+            radius: 0.8,
+            widthSegments: options.widthSegments || 32,
+            heightSegments: options.heightSegments || 32,
+        });
     }
 
     createTorusKnot(options = {}) {
         console.warn('⚠️ Torus Knot shape not implemented yet');
-        return this.createSphere({ ...options, radius: 0.8, color: 0x9775fa });
+        return this.createSphere({
+            ...options,
+            radius: 0.8,
+            color: 0x9775fa,
+            widthSegments: options.widthSegments || 32,
+            heightSegments: options.heightSegments || 32,
+        });
     }
 
     createIcosahedron(options = {}) {
         console.warn('⚠️ Icosahedron shape not implemented yet');
-        return this.createSphere({ ...options, radius: 0.8, color: 0x4a9eff });
+        return this.createSphere({
+            ...options,
+            radius: 0.8,
+            color: 0x4a9eff,
+            widthSegments: options.widthSegments || 16,
+            heightSegments: options.heightSegments || 16,
+        });
     }
 
     createOctahedron(options = {}) {
         console.warn('⚠️ Octahedron shape not implemented yet');
-        return this.createSphere({ ...options, radius: 0.8, color: 0x51cf66 });
+        return this.createSphere({
+            ...options,
+            radius: 0.8,
+            color: 0x51cf66,
+            widthSegments: options.widthSegments || 16,
+            heightSegments: options.heightSegments || 16,
+        });
     }
 
     createDodecahedron(options = {}) {
         console.warn('⚠️ Dodecahedron shape not implemented yet');
-        return this.createSphere({ ...options, radius: 0.8, color: 0xffa94d });
+        return this.createSphere({
+            ...options,
+            radius: 0.8,
+            color: 0xffa94d,
+            widthSegments: options.widthSegments || 16,
+            heightSegments: options.heightSegments || 16,
+        });
     }
 }

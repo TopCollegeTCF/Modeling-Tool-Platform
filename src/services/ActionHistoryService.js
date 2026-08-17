@@ -12,11 +12,10 @@
  * - Группировка последовательных действий (например, перемещение)
  * - Предотвращение дублирования снимков
  *
- * @version 1.0.0
- * @author Gabryelf
- * @since 1.0.0
  */
- export class ActionHistoryService {
+
+
+export class ActionHistoryService {
     constructor(editor) {
         this.editor = editor;
         this.historyManager = editor.historyManager;
@@ -25,30 +24,13 @@
         this.bulkActionName = null;
         this.bulkStarted = false;
         this.lastActionTime = 0;
-        this.actionCooldown = 500; // мс для группировки последовательных действий
-
-        // Настройки для различных типов действий
-        this.actionConfigs = {
-            'preAction': [
-                'transform', 'move', 'scale', 'rotate',
-                'changeColor', 'changeOpacity', 'changeName',
-                'delete', 'duplicate', 'add'
-            ],
-            'postAction': [
-                'select'
-            ]
-        };
-
-        this.lastStateHash = null;
+        this.actionCooldown = 500;
 
         console.log('📜 ActionHistoryService initialized');
     }
 
     /**
      * Начинает запись действия
-     * @param {string} actionName - Название действия
-     * @param {Object} context - Контекст действия (опционально)
-     * @returns {Function} Функция завершения действия
      */
     beginAction(actionName, context = {}) {
         if (!this.isRecording) {
@@ -56,12 +38,13 @@
         }
 
         const shouldCapture = this.shouldCaptureAction(actionName);
-
         if (!shouldCapture) {
             return () => {};
         }
 
+        // 🔥 СОХРАНЯЕМ СОСТОЯНИЕ ДО ИЗМЕНЕНИЯ
         const stateBefore = this.historyManager.captureState(`before_${actionName}`);
+        console.log(`📝 Action started: ${actionName}`, { stateBefore: stateBefore?.objects?.length || 0 });
 
         const now = Date.now();
         if (now - this.lastActionTime < this.actionCooldown && !this.bulkStarted) {
@@ -78,17 +61,22 @@
      * Завершает запись действия
      */
     endAction(actionName, stateBefore, result = null, context = {}) {
-        if (!this.isRecording || !stateBefore) return;
+        if (!this.isRecording || !stateBefore) {
+            console.log(`⏭️ Skipping endAction: recording=${this.isRecording}, stateBefore=${!!stateBefore}`);
+            return;
+        }
 
+        // 🔥 СОХРАНЯЕМ СОСТОЯНИЕ ПОСЛЕ ИЗМЕНЕНИЯ
         const stateAfter = this.historyManager.captureState(`after_${actionName}`);
-        if (this.isStateChanged(stateBefore, stateAfter)) {
-            this.historyManager.push(actionName);
+        console.log(`📝 Action ended: ${actionName}`, { 
+            before: stateBefore?.objects?.length || 0, 
+            after: stateAfter?.objects?.length || 0 
+        });
 
-            console.log(`📝 Action recorded: ${actionName}`, {
-                before: stateBefore.objects?.length || 0,
-                after: stateAfter.objects?.length || 0,
-                context
-            });
+        if (this.isStateChanged(stateBefore, stateAfter)) {
+            // 🔥 СОЗДАЕМ ШАГ В ИСТОРИИ
+            this.historyManager.push(actionName);
+            console.log(`✅ Action recorded: ${actionName}`);
         } else {
             console.log(`⏭️ Skipping action ${actionName} (no changes)`);
         }
@@ -98,12 +86,8 @@
         }
     }
 
-    /**
-     * Проверяет, изменилось ли состояние
-     */
     isStateChanged(before, after) {
         if (!before || !after) return true;
-
         if (before.objects?.length !== after.objects?.length) return true;
 
         const beforeMap = new Map();
@@ -114,7 +98,7 @@
         for (const afterObj of after.objects || []) {
             const beforeObj = beforeMap.get(afterObj.id);
             if (!beforeObj) return true;
-
+            
             if (this.hasPositionChanged(beforeObj.position, afterObj.position)) return true;
             if (this.hasRotationChanged(beforeObj.rotation, afterObj.rotation)) return true;
             if (this.hasScaleChanged(beforeObj.scale, afterObj.scale)) return true;

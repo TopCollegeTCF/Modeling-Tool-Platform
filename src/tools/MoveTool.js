@@ -1,11 +1,9 @@
 /**
  * 🔧 MoveTool - Инструмент перемещения
- *
- * @version 1.1.0
- * @author Gabryelf
- * @since 0.1.0
+ * 
+ * @version 3.0.0
  */
- import { Tool } from './Tool.js';
+ import { Tool } from '../tools/Tool.js';
 
  export class MoveTool extends Tool {
      constructor(editor) {
@@ -16,15 +14,13 @@
          this.gizmoService = null;
          this.snapDistance = 0.1;
          this.isDragging = false;
-         this.dragStartPosition = null;
-         this.draggedEntity = null;
          this._gizmoListenerAdded = false;
      }
  
      onActivate() {
          console.log('🔧 Move Tool activated');
          this.editor.getRenderer().domElement.style.cursor = 'move';
- 
+         
          if (!this.gizmoService) {
              this.gizmoService = this.editor.gizmoService;
          }
@@ -32,39 +28,29 @@
              console.error('❌ GizmoService not found');
              return;
          }
- 
+         
          this.gizmoService.setMode('translate');
          this.gizmoService.setTranslationSnap(this.snapDistance);
- 
-         // 🔥 Добавляем слушатель для записи в историю
+         
          if (!this._gizmoListenerAdded) {
              this.gizmoService.addListener((event, value) => {
                  if (event === 'dragging') {
                      if (value) {
+                         // Начало перетаскивания
                          this.isDragging = true;
-                         this.draggedEntity = this.editor.selectionManager.getSelected();
-                         if (this.draggedEntity) {
-                             this.dragStartPosition = this.draggedEntity.position.clone();
-                             this.editor.historyManager.captureState('before_move');
-                         }
+                         this.editor.commandManager.beginGroup('move');
+                         console.log('📦 Move group started');
                      } else {
+                         // Конец перетаскивания
                          this.isDragging = false;
-                         if (this.draggedEntity && this.dragStartPosition) {
-                             const currentPos = this.draggedEntity.position;
-                             const distance = this.dragStartPosition.distanceTo(currentPos);
-                             if (distance > 0.001) {
-                                 this.editor.historyManager.push('move');
-                                 console.log(`📝 Move recorded: ${distance.toFixed(3)} units`);
-                             }
-                         }
-                         this.dragStartPosition = null;
-                         this.draggedEntity = null;
+                         this.editor.commandManager.endGroup();
+                         console.log('📦 Move group ended');
                      }
                  }
              });
              this._gizmoListenerAdded = true;
          }
- 
+         
          const selected = this.editor.selectionManager.getSelected();
          if (selected) {
              this.gizmoService.attach(selected);
@@ -75,13 +61,14 @@
  
      onDeactivate() {
          console.log('🔧 Move Tool deactivated');
+         if (this._gizmoListenerAdded) {
+             // Не удаляем слушатель, чтобы не создавать новый при каждой активации
+         }
          if (this.gizmoService) {
              this.gizmoService.detach();
          }
          this.editor.getRenderer().domElement.style.cursor = 'default';
          this.isDragging = false;
-         this.dragStartPosition = null;
-         this.draggedEntity = null;
      }
  
      onUpdate() {

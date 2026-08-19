@@ -201,8 +201,9 @@
         try {
             const response = await fetch(`/api/project/load/${filename}`);
             const result = await response.json();
-
             if (result.success) {
+                // Очищаем сцену и историю
+                this.editor.clearScene();
                 this.editor.importScene(result.data);
                 this.close();
                 console.log(`✅ Project loaded: ${filename}`);

@@ -1,12 +1,6 @@
 /**
  * 🔧 SecondaryToolbar - Дополнительная панель инструментов
- *
- * 📋 ОПИСАНИЕ:
- * Фиксированная горизонтальная панель в левом верхнем углу.
- * Содержит основные системные кнопки: Project, Settings, Undo, Redo, Fly Mode.
- * Панель не перемещается и не скрывается через стандартные настройки панелей.
  */
-
  import { ICONS } from '../configs/icons.js';
 
  export class SecondaryToolbar {
@@ -17,7 +11,7 @@
          this.visibleButtons = new Set();
          this.buttonElements = new Map();
          this._commandUnsubscribe = null;
- 
+         
          this.registerButton('project', {
              title: 'Project Manager',
              icon: '/public/assets/icons/folder.svg',
@@ -39,7 +33,11 @@
              icon: '/public/assets/icons/undo.svg',
              defaultVisible: true,
              isSystem: true,
-             onClick: () => this.editor.undo?.(),
+             onClick: () => {
+                 console.log('🔘 Undo button clicked');
+                 this.editor.undo?.();
+                 setTimeout(() => this.update(), 100);
+             },
          });
  
          this.registerButton('redo', {
@@ -47,11 +45,15 @@
              icon: '/public/assets/icons/redo.svg',
              defaultVisible: true,
              isSystem: true,
-             onClick: () => this.editor.redo?.(),
+             onClick: () => {
+                 console.log('🔘 Redo button clicked');
+                 this.editor.redo?.();
+                 setTimeout(() => this.update(), 100);
+             },
          });
  
          this.registerButton('cameraFly', {
-             title: 'Fly Mode (Auto Rotate)',
+             title: 'Fly Mode',
              icon: '🚁',
              defaultVisible: true,
              isSystem: false,
@@ -65,7 +67,6 @@
          this.element = document.createElement('div');
          this.element.id = 'secondary-toolbar';
          this.element.setAttribute('data-panel', 'secondary');
- 
          this.element.style.cssText = `
              position: fixed;
              top: 12px;
@@ -82,18 +83,17 @@
              align-items: center;
              box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
          `;
- 
          document.body.appendChild(this.element);
  
-         // 🔥 Подписываемся на изменения команд
          if (this.editor.commandManager) {
              this._commandUnsubscribe = this.editor.commandManager.addListener(() => {
                  this.update();
              });
          }
  
+         setTimeout(() => this.update(), 100);
          this.update();
-         console.log('✅ SecondaryToolbar initialized (horizontal)');
+         console.log('✅ SecondaryToolbar initialized');
      }
  
      registerButton(id, config) {
@@ -140,10 +140,11 @@
          const isActive = id === 'cameraFly' && this.editor.cameraService?.flyModeEnabled;
          const isUndo = id === 'undo';
          const isRedo = id === 'redo';
- 
-         const canUndo = this.editor.commandManager?.canUndo() || false;
-         const canRedo = this.editor.commandManager?.canRedo() || false;
- 
+         
+         // Используем CommandManager для проверки состояния
+         const canUndo = this.editor.commandManager?.canUndo?.() || false;
+         const canRedo = this.editor.commandManager?.canRedo?.() || false;
+         
          let extraStyles = '';
          if (isUndo && !canUndo) {
              extraStyles = 'opacity: 0.3; cursor: not-allowed; pointer-events: none;';
@@ -197,7 +198,6 @@
                  const img = btn.querySelector('img');
                  if (img) img.style.filter = 'invert(1)';
              });
- 
              btn.addEventListener('mouseleave', () => {
                  btn.style.background = isActive ? 'rgba(74,158,255,0.2)' : 'transparent';
                  btn.style.color = isActive ? '#4a9eff' : '#888';
@@ -211,7 +211,7 @@
              if (config.onClick) {
                  config.onClick();
              }
-             setTimeout(() => this.update(), 50);
+             setTimeout(() => this.update(), 100);
          });
  
          return btn;
@@ -219,10 +219,14 @@
  
      update() {
          if (!this.element) return;
- 
-         const canUndo = this.editor.commandManager?.canUndo() || false;
-         const canRedo = this.editor.commandManager?.canRedo() || false;
- 
+         
+         const canUndo = this.editor.commandManager?.canUndo?.() || false;
+         const canRedo = this.editor.commandManager?.canRedo?.() || false;
+         const total = this.editor.commandManager?.commands?.length || 0;
+         const index = this.editor.commandManager?.currentIndex || -1;
+         
+         console.log(`🔄 Toolbar update: total=${total}, index=${index}, undo=${canUndo}, redo=${canRedo}`);
+         
          this.element.innerHTML = '';
          this.buttonElements.clear();
  
@@ -239,7 +243,6 @@
              return;
          }
  
-         // Системные кнопки
          let hasSystemButtons = false;
          for (const [id, config] of this.buttons) {
              if (config.visible && config.isSystem) {
@@ -250,7 +253,6 @@
              }
          }
  
-         // Проверяем дополнительные кнопки
          let hasExtraButtons = false;
          for (const [id, config] of this.buttons) {
              if (config.visible && !config.isSystem) {
@@ -265,7 +267,6 @@
              this.element.appendChild(divider);
          }
  
-         // Дополнительные кнопки
          for (const [id, config] of this.buttons) {
              if (config.visible && !config.isSystem) {
                  const btn = this.createButtonElement(id, config);

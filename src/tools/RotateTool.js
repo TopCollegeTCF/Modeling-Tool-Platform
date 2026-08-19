@@ -1,11 +1,9 @@
 /**
  * 🔧 RotateTool - Инструмент вращения
- *
- * @version 1.1.0
- * @author Gabryelf
- * @since 0.1.0
+ * 
+ * @version 3.0.0
  */
- import { Tool } from './Tool.js';
+ import { Tool } from '../tools/Tool.js';
 
  export class RotateTool extends Tool {
      constructor(editor) {
@@ -16,15 +14,13 @@
          this.gizmoService = null;
          this.snapAngle = Math.PI / 8;
          this.isDragging = false;
-         this.dragStartRotation = null;
-         this.draggedEntity = null;
          this._gizmoListenerAdded = false;
      }
  
      onActivate() {
          console.log('🔧 Rotate Tool activated');
          this.editor.getRenderer().domElement.style.cursor = 'pointer';
- 
+         
          if (!this.gizmoService) {
              this.gizmoService = this.editor.gizmoService;
          }
@@ -32,39 +28,27 @@
              console.error('❌ GizmoService not found');
              return;
          }
- 
+         
          this.gizmoService.setMode('rotate');
          this.gizmoService.setRotationSnap(this.snapAngle);
- 
-         // 🔥 Добавляем слушатель для записи в историю
+         
          if (!this._gizmoListenerAdded) {
              this.gizmoService.addListener((event, value) => {
                  if (event === 'dragging') {
                      if (value) {
                          this.isDragging = true;
-                         this.draggedEntity = this.editor.selectionManager.getSelected();
-                         if (this.draggedEntity) {
-                             this.dragStartRotation = this.draggedEntity.rotation.clone();
-                             this.editor.historyManager.captureState('before_rotate');
-                         }
+                         this.editor.commandManager.beginGroup('rotate');
+                         console.log('🔄 Rotate group started');
                      } else {
                          this.isDragging = false;
-                         if (this.draggedEntity && this.dragStartRotation) {
-                             const currentRot = this.draggedEntity.rotation;
-                             const angle = this.dragStartRotation.distanceTo(currentRot);
-                             if (angle > 0.001) {
-                                 this.editor.historyManager.push('rotate');
-                                 console.log(`📝 Rotation recorded: ${(angle * 180 / Math.PI).toFixed(2)}°`);
-                             }
-                         }
-                         this.dragStartRotation = null;
-                         this.draggedEntity = null;
+                         this.editor.commandManager.endGroup();
+                         console.log('🔄 Rotate group ended');
                      }
                  }
              });
              this._gizmoListenerAdded = true;
          }
- 
+         
          const selected = this.editor.selectionManager.getSelected();
          if (selected) {
              this.gizmoService.attach(selected);
@@ -80,8 +64,6 @@
          }
          this.editor.getRenderer().domElement.style.cursor = 'default';
          this.isDragging = false;
-         this.dragStartRotation = null;
-         this.draggedEntity = null;
      }
  
      onUpdate() {

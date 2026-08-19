@@ -15,20 +15,21 @@ export class GizmoService {
         this.gizmo = new TransformControls(camera, renderer.domElement);
         this.gizmo.setSize(0.8);
         this.gizmo.space = 'world';
-        
-        // этот инструмент нужно встроить позже
-        // this.gizmo.setColors({ x: 0xff4444, y: 0x44ff44, z: 0x4444ff });
-        
-        // Вместо этого пока настроим внешний вид через CSS или оставить стандартный
 
-        // События Gizmo
+
         this.gizmo.addEventListener('dragging-changed', (event) => {
             this.isActive = event.value;
             this.notifyListeners('dragging', event.value);
-            
+        
             if (!event.value) {
-                // Обновляем UI после завершения трансформации
+               // Обновляем UI после завершения трансформации
                 this.editor.uiManager.updateUI();
+            
+                // Завершаем группу, если она была начата
+                if (this._currentTool && this._currentTool.name) {
+                    const toolName = this._currentTool.name.toLowerCase();
+                    this.editor.commandManager.endGroup();
+                }
             }
         });
 

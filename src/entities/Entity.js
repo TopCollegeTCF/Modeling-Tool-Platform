@@ -2,11 +2,8 @@ import * as THREE from 'three';
 
 export class Entity extends THREE.Mesh {
     constructor(geometry, material, options = {}) {
-        // Сначала вызываем super
         super(geometry, material);
         
-        // 🔥 ИНИЦИАЛИЗИРУЕМ userData ПРЯМО СЕЙЧАС
-        // Только после super() можно работать с this
         this.userData = this.userData || {};
         this.userData.id = options.id || 0;
         this.userData.name = options.name || 'Entity';
@@ -14,10 +11,7 @@ export class Entity extends THREE.Mesh {
         this.userData.isSelectable = options.isSelectable !== false;
         this.userData.isEntity = true;
         
-        // Сохраняем оригинальный цвет
         this._originalColor = material.color ? material.color.clone() : new THREE.Color(0xffffff);
-        
-        // Настройки для выделения
         this.highlightColor = options.highlightColor || new THREE.Color(0x4a9eff);
         this.highlightIntensity = options.highlightIntensity || 0.3;
     }

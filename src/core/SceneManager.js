@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { COLORS } from '../configs/colors.js';
+import { LightingManager } from '../services/LightingManager.js';
 
 /**
  * 🎬 SceneManager - Управление 3D сценой
@@ -18,9 +19,6 @@ import { COLORS } from '../configs/colors.js';
  * - Хелперы — GridHelper и AxesHelper
  * - Сущности — Map с пользовательскими объектами
  *
- * @version 1.1.0
- * @author Gabryelf
- * @since 0.0.1
  */
 export class SceneManager {
     constructor() {
@@ -44,6 +42,9 @@ export class SceneManager {
         this.helperThickness = 1;
         /** @type {string} - Текущая тема: 'dark' | 'light' */
         this.currentTheme = 'dark';
+
+        this.lightingManager = null;   // Lighting
+        this.lights = [];
     }
 
     /**
@@ -52,7 +53,11 @@ export class SceneManager {
     init() {
         this.scene = new THREE.Scene();
         this.scene.background = new THREE.Color(0x0d0d1a);
-        this.createLights();
+        // Инициализируем освещение
+        this.lightingManager = new LightingManager(this);
+        this.lightingManager.init(this.scene);
+        this.lightingManager.loadSettings();
+
         this.createHelpers();
         this.loadSettings();
         console.log('🎬 Scene initialized');
@@ -259,6 +264,22 @@ export class SceneManager {
 
     getScene() {
         return this.scene;
+    }
+
+    /**
+     * Получить менеджер освещения
+     */
+     getLightingManager() {
+        return this.lightingManager;
+    }
+
+    /**
+     * Устанавливает тип освещения
+     */
+    setLightingType(type) {
+        if (this.lightingManager) {
+            this.lightingManager.setType(type);
+        }
     }
 
     clear() {

@@ -1,0 +1,202 @@
+{
+  "version": "8.0",
+  "timestamp": 1787508951369,
+  "history": [
+    {
+      "timestamp": 1787508888584,
+      "action": "initial",
+      "objects": [],
+      "selectionId": null
+    },
+    {
+      "timestamp": 1787508888688,
+      "action": "addCube",
+      "objects": [
+        {
+          "id": 1,
+          "name": "Cube",
+          "type": "cube",
+          "position": {
+            "x": 0,
+            "y": 0.5,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "color": 4890367,
+          "opacity": 1,
+          "transparent": false
+        }
+      ],
+      "selectionId": 1
+    },
+    {
+      "timestamp": 1787508920052,
+      "action": "group_end_select",
+      "objects": [
+        {
+          "id": 1,
+          "name": "Cube",
+          "type": "cube",
+          "position": {
+            "x": 0,
+            "y": 0.5,
+            "z": 4.495040949868025
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "color": 4890367,
+          "opacity": 1,
+          "transparent": false
+        }
+      ],
+      "selectionId": 1
+    },
+    {
+      "timestamp": 1787508925688,
+      "action": "group_end_select",
+      "objects": [
+        {
+          "id": 1,
+          "name": "Cube",
+          "type": "cube",
+          "position": {
+            "x": 0,
+            "y": 0.5,
+            "z": 4.495040949868025
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "color": 4890367,
+          "opacity": 1,
+          "transparent": false
+        },
+        {
+          "id": 2,
+          "name": "Sphere",
+          "type": "sphere",
+          "position": {
+            "x": 4.657041245520587,
+            "y": 0.5,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "color": 16739179,
+          "opacity": 1,
+          "transparent": false
+        }
+      ],
+      "selectionId": 2
+    },
+    {
+      "timestamp": 1787508930877,
+      "action": "group_end_select",
+      "objects": [
+        {
+          "id": 1,
+          "name": "Cube",
+          "type": "cube",
+          "position": {
+            "x": 0,
+            "y": 0.5,
+            "z": 4.495040949868025
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "color": 4890367,
+          "opacity": 1,
+          "transparent": false
+        },
+        {
+          "id": 2,
+          "name": "Sphere",
+          "type": "sphere",
+          "position": {
+            "x": 4.657041245520587,
+            "y": 0.5,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "color": 16739179,
+          "opacity": 1,
+          "transparent": false
+        },
+        {
+          "id": 3,
+          "name": "Cylinder",
+          "type": "cylinder",
+          "position": {
+            "x": -5.463965821763102,
+            "y": 0.5,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "color": 5361510,
+          "opacity": 1,
+          "transparent": false
+        }
+      ],
+      "selectionId": 3
+    }
+  ],
+  "currentIndex": 4
+}

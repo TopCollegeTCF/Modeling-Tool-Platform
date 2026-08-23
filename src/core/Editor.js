@@ -24,6 +24,7 @@
  import { StorageManager } from '../storage/StorageManager.js';
  import { CommandManager } from '../services/CommandManager.js';
  import { HistoryManager } from '../services/HistoryManager.js';
+ import { MaterialManager } from '../services/MaterialManager.js';
  
  export class Editor {
      constructor() {
@@ -40,6 +41,8 @@
          // Services - история теперь через CommandManager
          this.commandManager = new CommandManager(this, 100);
          this.historyManager = new HistoryManager(this); // Для совместимости
+
+         this.materialManager = new MaterialManager(this);
          
          // Другие сервисы
          this.cameraService = null;
@@ -98,6 +101,7 @@
          this.sceneManager.init();
          this.renderManager.init(this.sceneManager.getScene());
          this.toolManager.init();
+         this.materialManager.init();
          console.log('✅ Scene initialized');
      }
  

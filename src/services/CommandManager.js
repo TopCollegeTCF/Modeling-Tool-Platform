@@ -1,11 +1,11 @@
 /**
  * 📜 CommandManager - Сервис управления историей команд
- * 
+ *
  * 🎯 ЗАДАЧА:
  * - Отслеживает все действия пользователя
  * - Создает полные снимки состояния сцены
  * - Управляет Undo/Redo через HistoryManager
- * 
+ *
  */
  export class CommandManager {
     constructor(editor, maxCommands = 100) {
@@ -16,14 +16,15 @@
         this.isExecuting = false;
         this.isRestoring = false;
         this._listeners = [];
+        this._pendingPush = null;
+        this._pushTimeout = null;
         
-        // Группировка для непрерывных действий (например, перемещение)
-        this._groupStack = [];
+        // Группировка для непрерывных действий
         this._isInGroup = false;
         this._groupName = null;
         this._groupStartState = null;
         
-        console.log('📜 CommandManager v8 initialized (max: ' + maxCommands + ')');
+        console.log('📜 CommandManager v8.1 initialized (max: ' + maxCommands + ')');
     }
 
     addListener(callback) {
@@ -46,7 +47,6 @@
     captureState(actionName = 'unknown') {
         const entities = this.editor.sceneManager.getAllEntities();
         const objects = entities.map(entity => this._serializeEntity(entity));
-        
         return {
             timestamp: Date.now(),
             action: actionName,
@@ -60,7 +60,6 @@
      */
     _serializeEntity(entity) {
         if (!entity) return null;
-        
         const data = {
             id: entity.userData.id,
             name: entity.userData.name || entity.userData.type,
@@ -81,15 +80,15 @@
                 z: entity.scale.z
             }
         };
-
         if (entity.material) {
             if (entity.material.color) {
                 data.color = entity.material.color.getHex();
             }
             data.opacity = entity.material.opacity || 1;
             data.transparent = entity.material.transparent || false;
+            // Сохраняем тип материала
+            data.materialType = entity.userData.materialType || 'standard';
         }
-
         // Параметры геометрии
         if (entity.type === 'cube') {
             data.width = entity._width !== undefined ? entity._width : entity.geometry.parameters?.width || 1;
@@ -108,7 +107,6 @@
             data.heightSegments = entity._heightSegments !== undefined ? entity._heightSegments : entity.geometry.parameters?.heightSegments || 1;
             data.openEnded = entity._openEnded !== undefined ? entity._openEnded : entity.geometry.parameters?.openEnded || false;
         }
-
         return data;
     }
 
@@ -123,14 +121,12 @@
 
         this.isRestoring = true;
         try {
-            // Создаем карту существующих объектов
             const existingEntities = this.editor.sceneManager.getAllEntities();
             const existingMap = new Map();
             existingEntities.forEach(entity => {
                 existingMap.set(entity.userData.id, entity);
             });
 
-            // Создаем карту объектов из снимка
             const newMap = new Map();
             state.objects.forEach(objData => {
                 newMap.set(objData.id, objData);
@@ -165,9 +161,7 @@
                 this.editor.selectionManager.clear();
             }
 
-            // 4. Обновляем UI
             this.editor.uiManager.updateUI();
-
             console.log(`✅ State restored: ${state.objects.length} objects, action: ${state.action}`);
 
         } catch (error) {
@@ -181,7 +175,6 @@
      * Обновляет существующий объект
      */
     _updateEntity(entity, data) {
-        // Трансформации
         if (data.position) {
             entity.position.set(data.position.x, data.position.y, data.position.z);
         }
@@ -191,13 +184,11 @@
         if (data.scale) {
             entity.scale.set(data.scale.x, data.scale.y, data.scale.z);
         }
-
-        // Имя
         if (data.name) {
             entity.userData.name = data.name;
         }
 
-        // Материал
+        // Обновляем материал
         if (entity.material) {
             if (data.color !== undefined) {
                 entity.material.color.setHex(data.color);
@@ -261,7 +252,6 @@
      */
     _createEntity(data) {
         let entity = null;
-        
         switch (data.type) {
             case 'cube':
                 entity = this.editor.shapeManager.createCube({
@@ -304,11 +294,9 @@
                 console.warn('Unknown entity type:', data.type);
                 return null;
         }
-
         if (entity && data.id) {
             entity.userData.id = data.id;
         }
-
         return entity;
     }
 
@@ -338,10 +326,8 @@
             return;
         }
 
-        // Создаем конечное состояние
         const endState = this.captureState(`group_end_${this._groupName}`);
         
-        // Проверяем, изменилось ли состояние
         if (this._statesEqual(this._groupStartState, endState)) {
             console.log('📦 No changes in group, skipping');
             this._isInGroup = false;
@@ -350,7 +336,6 @@
             return;
         }
 
-        // Сохраняем как один шаг с именем группы
         this._pushState(endState, this._groupName);
 
         this._isInGroup = false;
@@ -365,8 +350,6 @@
     _statesEqual(state1, state2) {
         if (!state1 || !state2) return false;
         if (state1.objects.length !== state2.objects.length) return false;
-        
-        // Сравниваем каждый объект
         for (let i = 0; i < state1.objects.length; i++) {
             const obj1 = state1.objects[i];
             const obj2 = state2.objects[i];
@@ -383,37 +366,18 @@
         if (obj1.id !== obj2.id) return false;
         if (obj1.type !== obj2.type) return false;
         
-        // Проверяем позицию
-        const pos1 = obj1.position;
-        const pos2 = obj2.position;
         const eps = 0.0001;
-        if (Math.abs(pos1.x - pos2.x) > eps ||
-            Math.abs(pos1.y - pos2.y) > eps ||
-            Math.abs(pos1.z - pos2.z) > eps) return false;
+        const pos1 = obj1.position, pos2 = obj2.position;
+        if (Math.abs(pos1.x - pos2.x) > eps || Math.abs(pos1.y - pos2.y) > eps || Math.abs(pos1.z - pos2.z) > eps) return false;
         
-        // Проверяем поворот
-        const rot1 = obj1.rotation;
-        const rot2 = obj2.rotation;
-        if (Math.abs(rot1.x - rot2.x) > eps ||
-            Math.abs(rot1.y - rot2.y) > eps ||
-            Math.abs(rot1.z - rot2.z) > eps) return false;
+        const rot1 = obj1.rotation, rot2 = obj2.rotation;
+        if (Math.abs(rot1.x - rot2.x) > eps || Math.abs(rot1.y - rot2.y) > eps || Math.abs(rot1.z - rot2.z) > eps) return false;
         
-        // Проверяем масштаб
-        const scale1 = obj1.scale;
-        const scale2 = obj2.scale;
-        if (Math.abs(scale1.x - scale2.x) > eps ||
-            Math.abs(scale1.y - scale2.y) > eps ||
-            Math.abs(scale1.z - scale2.z) > eps) return false;
+        const scale1 = obj1.scale, scale2 = obj2.scale;
+        if (Math.abs(scale1.x - scale2.x) > eps || Math.abs(scale1.y - scale2.y) > eps || Math.abs(scale1.z - scale2.z) > eps) return false;
         
-        // Проверяем цвет
-        if (obj1.color !== undefined && obj2.color !== undefined) {
-            if (obj1.color !== obj2.color) return false;
-        }
-        
-        // Проверяем прозрачность
-        if (obj1.opacity !== undefined && obj2.opacity !== undefined) {
-            if (Math.abs(obj1.opacity - obj2.opacity) > eps) return false;
-        }
+        if (obj1.color !== undefined && obj2.color !== undefined && obj1.color !== obj2.color) return false;
+        if (obj1.opacity !== undefined && obj2.opacity !== undefined && Math.abs(obj1.opacity - obj2.opacity) > eps) return false;
         
         return true;
     }
@@ -426,25 +390,19 @@
             console.log('⏭️ Skipping push - restoring');
             return;
         }
-
         if (this.isExecuting) {
             console.log('⏭️ Skipping push - executing');
             return;
         }
-
         if (!state) {
             console.log('⏭️ No state to push');
             return;
         }
 
-        // Обрезаем историю до текущего индекса
         this.history = this.history.slice(0, this.currentIndex + 1);
-        
-        // Добавляем новое состояние
         this.history.push(state);
         this.currentIndex = this.history.length - 1;
 
-        // Ограничиваем размер
         if (this.history.length > this.maxCommands) {
             const removeCount = this.history.length - this.maxCommands;
             this.history.splice(0, removeCount);
@@ -456,22 +414,62 @@
     }
 
     /**
-     * Записывает действие в историю
+     * Записывает действие в историю с принудительным сохранением
      */
-    push(actionName = 'unknown') {
+    push(actionName = 'unknown', force = false) {
         if (this.isRestoring) return;
         if (this._isInGroup) {
             console.log(`📝 Adding to group: ${actionName}`);
             return;
         }
-        const state = this.captureState(actionName);
-        this._pushState(state, actionName);
+        
+        // Если force=true, записываем сразу
+        if (force) {
+            const state = this.captureState(actionName);
+            this._pushState(state, actionName);
+            return;
+        }
+        
+        // Иначе с небольшой задержкой (чтобы захватить все изменения)
+        if (this._pushTimeout) {
+            clearTimeout(this._pushTimeout);
+        }
+        
+        this._pendingPush = actionName;
+        this._pushTimeout = setTimeout(() => {
+            if (this._pendingPush) {
+                const state = this.captureState(this._pendingPush);
+                this._pushState(state, this._pendingPush);
+                this._pendingPush = null;
+            }
+            this._pushTimeout = null;
+        }, 50);
+    }
+
+    /**
+     * Принудительно сохраняет текущее состояние (для сохранения проекта)
+     */
+    flush() {
+        if (this._pushTimeout) {
+            clearTimeout(this._pushTimeout);
+            this._pushTimeout = null;
+        }
+        if (this._pendingPush) {
+            const state = this.captureState(this._pendingPush);
+            this._pushState(state, this._pendingPush);
+            this._pendingPush = null;
+        }
+        // Также завершаем группу, если она активна
+        if (this._isInGroup) {
+            this.endGroup();
+        }
     }
 
     /**
      * Откат на один шаг назад (Undo)
      */
     undo() {
+        this.flush(); // Принудительно сохраняем перед откатом
         if (this.isExecuting) return false;
         if (this._isInGroup) {
             console.warn('⚠️ Cannot undo while in group');
@@ -502,6 +500,7 @@
      * Повтор команды (Redo)
      */
     redo() {
+        this.flush(); // Принудительно сохраняем перед повтором
         if (this.isExecuting) return false;
         if (this._isInGroup) {
             console.warn('⚠️ Cannot redo while in group');
@@ -545,22 +544,21 @@
         };
     }
 
-    /**
-     * Очищает всю историю
-     */
     clear() {
         this.history = [];
         this.currentIndex = -1;
         this._isInGroup = false;
         this._groupName = null;
         this._groupStartState = null;
+        if (this._pushTimeout) {
+            clearTimeout(this._pushTimeout);
+            this._pushTimeout = null;
+        }
+        this._pendingPush = null;
         console.log('🧹 History cleared');
         this.notifyListeners();
     }
 
-    /**
-     * Сохраняет начальное состояние
-     */
     saveInitialState() {
         this.clear();
         const state = this.captureState('initial');
@@ -570,36 +568,25 @@
         this.notifyListeners();
     }
 
-    /**
-     * Сериализует историю в JSON
-     */
     serialize() {
+        this.flush(); // Принудительно сохраняем перед сериализацией
         return {
-            version: '8.0',
+            version: '8.1',
             timestamp: Date.now(),
             history: this.history,
             currentIndex: this.currentIndex
         };
     }
 
-    /**
-     * Десериализует историю из JSON
-     */
     deserialize(data) {
         if (!data || !data.history) return;
-        
         this.isRestoring = true;
         try {
             this.history = data.history;
-            this.currentIndex = data.currentIndex !== undefined 
-                ? data.currentIndex 
-                : this.history.length - 1;
-            
-            // Восстанавливаем состояние
+            this.currentIndex = data.currentIndex !== undefined ? data.currentIndex : this.history.length - 1;
             if (this.currentIndex >= 0 && this.currentIndex < this.history.length) {
                 this.restoreState(this.history[this.currentIndex]);
             }
-            
             console.log(`📂 History restored: ${this.history.length} steps`);
             this.notifyListeners();
         } catch (error) {

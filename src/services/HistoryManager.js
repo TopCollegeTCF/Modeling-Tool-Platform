@@ -1,15 +1,15 @@
 /**
  * 📜 HistoryManager - Упрощенный менеджер истории
- * 
+ *
  * 🎯 ЗАДАЧА:
  * - Предоставляет интерфейс совместимости со старым кодом
  * - Вся логика теперь в CommandManager
- * 
+ *
  */
  export class HistoryManager {
     constructor(editor) {
         this.editor = editor;
-        console.log('📜 HistoryManager v2 initialized (compatibility layer)');
+        console.log('📜 HistoryManager v2.0 initialized (compatibility layer)');
     }
 
     // Проксируем все методы в CommandManager
@@ -25,8 +25,8 @@
         this.editor.commandManager.endGroup();
     }
 
-    push(actionName) {
-        this.editor.commandManager.push(actionName);
+    push(actionName, force = false) {
+        this.editor.commandManager.push(actionName, force);
     }
 
     undo() {
@@ -71,5 +71,9 @@
 
     deserialize(data) {
         this.editor.commandManager.deserialize(data);
+    }
+
+    flush() {
+        this.editor.commandManager.flush();
     }
 }

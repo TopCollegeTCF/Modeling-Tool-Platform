@@ -5,6 +5,7 @@
  * - Отслеживает все действия пользователя
  * - Создает полные снимки состояния сцены
  * - Управляет Undo/Redo через HistoryManager
+ * - При новом действии удаляет все шаги после текущего индекса (как в Tinkercad)
  *
  */
  export class CommandManager {
@@ -18,13 +19,14 @@
         this._listeners = [];
         this._pendingPush = null;
         this._pushTimeout = null;
-        
+
         // Группировка для непрерывных действий
         this._isInGroup = false;
         this._groupName = null;
         this._groupStartState = null;
-        
-        console.log('📜 CommandManager v8.1 initialized (max: ' + maxCommands + ')');
+        this._groupCommands = []; // Список команд в группе
+
+        console.log('📜 CommandManager v9.0 initialized (max: ' + maxCommands + ')');
     }
 
     addListener(callback) {
@@ -80,6 +82,7 @@
                 z: entity.scale.z
             }
         };
+
         if (entity.material) {
             if (entity.material.color) {
                 data.color = entity.material.color.getHex();
@@ -88,7 +91,12 @@
             data.transparent = entity.material.transparent || false;
             // Сохраняем тип материала
             data.materialType = entity.userData.materialType || 'standard';
+            // Сохраняем текстуру
+            if (entity.userData.texture) {
+                data.texture = entity.userData.texture;
+            }
         }
+
         // Параметры геометрии
         if (entity.type === 'cube') {
             data.width = entity._width !== undefined ? entity._width : entity.geometry.parameters?.width || 1;
@@ -107,6 +115,7 @@
             data.heightSegments = entity._heightSegments !== undefined ? entity._heightSegments : entity.geometry.parameters?.heightSegments || 1;
             data.openEnded = entity._openEnded !== undefined ? entity._openEnded : entity.geometry.parameters?.openEnded || false;
         }
+
         return data;
     }
 
@@ -163,7 +172,6 @@
 
             this.editor.uiManager.updateUI();
             console.log(`✅ State restored: ${state.objects.length} objects, action: ${state.action}`);
-
         } catch (error) {
             console.error('❌ Error restoring state:', error);
         } finally {
@@ -200,6 +208,61 @@
                 entity.material.transparent = data.transparent !== undefined ? data.transparent : data.opacity < 1;
                 entity.material.opacity = data.opacity;
                 entity.material.needsUpdate = true;
+            }
+            // Восстанавливаем тип материала
+            if (data.materialType) {
+                entity.userData.materialType = data.materialType;
+                // Применяем материал через MaterialManager для полного восстановления
+                const materialManager = this.editor.materialManager;
+                if (materialManager && data.materialType) {
+                    const texture = data.texture || null;
+                    const color = data.color || entity.material.color.getHex();
+                    const opacity = data.opacity || entity.material.opacity || 1;
+                    const transparent = data.transparent !== undefined ? data.transparent : opacity < 1;
+                    
+                    const newMaterial = materialManager.createMaterial(data.materialType, {
+                        color: color,
+                        roughness: entity.material.roughness || 0.3,
+                        metalness: entity.material.metalness || 0.1,
+                        transparent: transparent,
+                        opacity: opacity,
+                        texture: texture,
+                    });
+                    
+                    const oldMaterial = entity.material;
+                    entity.material = newMaterial;
+                    entity.material.needsUpdate = true;
+                    if (oldMaterial && oldMaterial !== newMaterial && oldMaterial.dispose) {
+                        oldMaterial.dispose();
+                    }
+                    if (data.texture) {
+                        entity.userData.texture = data.texture;
+                    }
+                }
+            } else if (data.texture) {
+                // Если есть текстура, но нет типа материала - применяем стандартный
+                const materialManager = this.editor.materialManager;
+                if (materialManager) {
+                    const color = data.color || entity.material.color.getHex();
+                    const opacity = data.opacity || entity.material.opacity || 1;
+                    const transparent = data.transparent !== undefined ? data.transparent : opacity < 1;
+                    const newMaterial = materialManager.createMaterial(MATERIAL_TYPES.STANDARD, {
+                        color: color,
+                        roughness: entity.material.roughness || 0.3,
+                        metalness: entity.material.metalness || 0.1,
+                        transparent: transparent,
+                        opacity: opacity,
+                        texture: data.texture,
+                    });
+                    const oldMaterial = entity.material;
+                    entity.material = newMaterial;
+                    entity.material.needsUpdate = true;
+                    if (oldMaterial && oldMaterial !== newMaterial && oldMaterial.dispose) {
+                        oldMaterial.dispose();
+                    }
+                    entity.userData.texture = data.texture;
+                    entity.userData.materialType = MATERIAL_TYPES.STANDARD;
+                }
             }
         }
 
@@ -294,9 +357,62 @@
                 console.warn('Unknown entity type:', data.type);
                 return null;
         }
+
         if (entity && data.id) {
             entity.userData.id = data.id;
         }
+
+        // Восстанавливаем материал
+        if (entity && data.materialType && this.editor.materialManager) {
+            const materialManager = this.editor.materialManager;
+            const color = data.color || entity.material.color.getHex();
+            const opacity = data.opacity || entity.material.opacity || 1;
+            const transparent = data.transparent !== undefined ? data.transparent : opacity < 1;
+            const texture = data.texture || null;
+            
+            const newMaterial = materialManager.createMaterial(data.materialType, {
+                color: color,
+                roughness: entity.material.roughness || 0.3,
+                metalness: entity.material.metalness || 0.1,
+                transparent: transparent,
+                opacity: opacity,
+                texture: texture,
+            });
+            
+            const oldMaterial = entity.material;
+            entity.material = newMaterial;
+            entity.material.needsUpdate = true;
+            if (oldMaterial && oldMaterial !== newMaterial && oldMaterial.dispose) {
+                oldMaterial.dispose();
+            }
+            entity.userData.materialType = data.materialType;
+            if (data.texture) {
+                entity.userData.texture = data.texture;
+            }
+        } else if (entity && data.texture && this.editor.materialManager) {
+            // Если есть текстура, но нет типа материала
+            const materialManager = this.editor.materialManager;
+            const color = data.color || entity.material.color.getHex();
+            const opacity = data.opacity || entity.material.opacity || 1;
+            const transparent = data.transparent !== undefined ? data.transparent : opacity < 1;
+            const newMaterial = materialManager.createMaterial(MATERIAL_TYPES.STANDARD, {
+                color: color,
+                roughness: entity.material.roughness || 0.3,
+                metalness: entity.material.metalness || 0.1,
+                transparent: transparent,
+                opacity: opacity,
+                texture: data.texture,
+            });
+            const oldMaterial = entity.material;
+            entity.material = newMaterial;
+            entity.material.needsUpdate = true;
+            if (oldMaterial && oldMaterial !== newMaterial && oldMaterial.dispose) {
+                oldMaterial.dispose();
+            }
+            entity.userData.texture = data.texture;
+            entity.userData.materialType = MATERIAL_TYPES.STANDARD;
+        }
+
         return entity;
     }
 
@@ -311,6 +427,7 @@
         this._isInGroup = true;
         this._groupName = groupName;
         this._groupStartState = this.captureState(`group_start_${groupName}`);
+        this._groupCommands = [];
         console.log(`📦 Group started: ${groupName}`);
     }
 
@@ -322,25 +439,28 @@
             this._isInGroup = false;
             this._groupName = null;
             this._groupStartState = null;
+            this._groupCommands = [];
             console.log('📦 Group ended (empty)');
             return;
         }
 
         const endState = this.captureState(`group_end_${this._groupName}`);
-        
         if (this._statesEqual(this._groupStartState, endState)) {
             console.log('📦 No changes in group, skipping');
             this._isInGroup = false;
             this._groupName = null;
             this._groupStartState = null;
+            this._groupCommands = [];
             return;
         }
 
+        // Сохраняем группу как одно действие с именем группы
         this._pushState(endState, this._groupName);
-
+        
         this._isInGroup = false;
         this._groupName = null;
         this._groupStartState = null;
+        this._groupCommands = [];
         console.log(`📦 Group ended: ${this._groupName}`);
     }
 
@@ -350,6 +470,7 @@
     _statesEqual(state1, state2) {
         if (!state1 || !state2) return false;
         if (state1.objects.length !== state2.objects.length) return false;
+
         for (let i = 0; i < state1.objects.length; i++) {
             const obj1 = state1.objects[i];
             const obj2 = state2.objects[i];
@@ -365,25 +486,28 @@
         if (!obj1 || !obj2) return false;
         if (obj1.id !== obj2.id) return false;
         if (obj1.type !== obj2.type) return false;
-        
+
         const eps = 0.0001;
         const pos1 = obj1.position, pos2 = obj2.position;
         if (Math.abs(pos1.x - pos2.x) > eps || Math.abs(pos1.y - pos2.y) > eps || Math.abs(pos1.z - pos2.z) > eps) return false;
-        
+
         const rot1 = obj1.rotation, rot2 = obj2.rotation;
         if (Math.abs(rot1.x - rot2.x) > eps || Math.abs(rot1.y - rot2.y) > eps || Math.abs(rot1.z - rot2.z) > eps) return false;
-        
+
         const scale1 = obj1.scale, scale2 = obj2.scale;
         if (Math.abs(scale1.x - scale2.x) > eps || Math.abs(scale1.y - scale2.y) > eps || Math.abs(scale1.z - scale2.z) > eps) return false;
-        
+
         if (obj1.color !== undefined && obj2.color !== undefined && obj1.color !== obj2.color) return false;
         if (obj1.opacity !== undefined && obj2.opacity !== undefined && Math.abs(obj1.opacity - obj2.opacity) > eps) return false;
-        
+        if (obj1.materialType !== undefined && obj2.materialType !== undefined && obj1.materialType !== obj2.materialType) return false;
+        if (obj1.texture !== undefined && obj2.texture !== undefined && obj1.texture !== obj2.texture) return false;
+
         return true;
     }
 
     /**
      * Сохраняет состояние в историю
+     * ПРИ НОВОМ ДЕЙСТВИИ УДАЛЯЕТ ВСЕ ШАГИ ПОСЛЕ ТЕКУЩЕГО ИНДЕКСА
      */
     _pushState(state, actionName = 'unknown') {
         if (this.isRestoring) {
@@ -399,10 +523,19 @@
             return;
         }
 
-        this.history = this.history.slice(0, this.currentIndex + 1);
+        // ⭐ КЛЮЧЕВОЕ ИЗМЕНЕНИЕ: Удаляем все шаги после текущего индекса
+        // Это поведение как в Tinkercad - новое действие перезаписывает будущее
+        const stepsToRemove = this.history.length - this.currentIndex - 1;
+        if (stepsToRemove > 0) {
+            this.history.splice(this.currentIndex + 1, stepsToRemove);
+            console.log(`🗑️ Removed ${stepsToRemove} future steps (history truncated)`);
+        }
+
+        // Добавляем новое состояние
         this.history.push(state);
         this.currentIndex = this.history.length - 1;
 
+        // Ограничиваем размер истории
         if (this.history.length > this.maxCommands) {
             const removeCount = this.history.length - this.maxCommands;
             this.history.splice(0, removeCount);
@@ -418,23 +551,25 @@
      */
     push(actionName = 'unknown', force = false) {
         if (this.isRestoring) return;
+
         if (this._isInGroup) {
-            console.log(`📝 Adding to group: ${actionName}`);
+            this._groupCommands.push(actionName);
+            console.log(`📝 Adding to group: ${actionName} (${this._groupCommands.length} commands)`);
             return;
         }
-        
+
         // Если force=true, записываем сразу
         if (force) {
             const state = this.captureState(actionName);
             this._pushState(state, actionName);
             return;
         }
-        
+
         // Иначе с небольшой задержкой (чтобы захватить все изменения)
         if (this._pushTimeout) {
             clearTimeout(this._pushTimeout);
         }
-        
+
         this._pendingPush = actionName;
         this._pushTimeout = setTimeout(() => {
             if (this._pendingPush) {
@@ -459,6 +594,7 @@
             this._pushState(state, this._pendingPush);
             this._pendingPush = null;
         }
+
         // Также завершаем группу, если она активна
         if (this._isInGroup) {
             this.endGroup();
@@ -470,6 +606,7 @@
      */
     undo() {
         this.flush(); // Принудительно сохраняем перед откатом
+
         if (this.isExecuting) return false;
         if (this._isInGroup) {
             console.warn('⚠️ Cannot undo while in group');
@@ -501,6 +638,7 @@
      */
     redo() {
         this.flush(); // Принудительно сохраняем перед повтором
+
         if (this.isExecuting) return false;
         if (this._isInGroup) {
             console.warn('⚠️ Cannot redo while in group');
@@ -550,6 +688,7 @@
         this._isInGroup = false;
         this._groupName = null;
         this._groupStartState = null;
+        this._groupCommands = [];
         if (this._pushTimeout) {
             clearTimeout(this._pushTimeout);
             this._pushTimeout = null;
@@ -571,7 +710,7 @@
     serialize() {
         this.flush(); // Принудительно сохраняем перед сериализацией
         return {
-            version: '8.1',
+            version: '9.0',
             timestamp: Date.now(),
             history: this.history,
             currentIndex: this.currentIndex

@@ -1,11 +1,14 @@
 /**
  * 📜 CommandManager - Сервис управления историей команд
- * 
+ *
  * 🎯 ЗАДАЧА:
  * - Отслеживает все действия пользователя
  * - Создает полные снимки состояния сцены
  * - Управляет Undo/Redo через HistoryManager
- * 
+ * - При новом действии удаляет все шаги после текущего индекса
+ * - Сохраняет модифицированную геометрию для экспорта/импорта
+ *
+ * @version 9.2.0
  */
  export class CommandManager {
     constructor(editor, maxCommands = 100) {
@@ -16,14 +19,14 @@
         this.isExecuting = false;
         this.isRestoring = false;
         this._listeners = [];
-        
-        // Группировка для непрерывных действий (например, перемещение)
-        this._groupStack = [];
+        this._pendingPush = null;
+        this._pushTimeout = null;
+        // Группировка для непрерывных действий
         this._isInGroup = false;
         this._groupName = null;
         this._groupStartState = null;
-        
-        console.log('📜 CommandManager v8 initialized (max: ' + maxCommands + ')');
+        this._groupCommands = [];
+        console.log('📜 CommandManager v9.2 initialized (max: ' + maxCommands + ')');
     }
 
     addListener(callback) {
@@ -46,7 +49,6 @@
     captureState(actionName = 'unknown') {
         const entities = this.editor.sceneManager.getAllEntities();
         const objects = entities.map(entity => this._serializeEntity(entity));
-        
         return {
             timestamp: Date.now(),
             action: actionName,
@@ -56,11 +58,11 @@
     }
 
     /**
-     * Сериализует один объект
+     * Сериализует один объект ПОЛНОСТЬЮ (включая геометрию)
      */
     _serializeEntity(entity) {
         if (!entity) return null;
-        
+
         const data = {
             id: entity.userData.id,
             name: entity.userData.name || entity.userData.type,
@@ -82,15 +84,26 @@
             }
         };
 
+        // Сохраняем материал
         if (entity.material) {
             if (entity.material.color) {
                 data.color = entity.material.color.getHex();
             }
             data.opacity = entity.material.opacity || 1;
             data.transparent = entity.material.transparent || false;
+            data.materialType = entity.userData.materialType || 'standard';
+            if (entity.userData.texture) {
+                data.texture = entity.userData.texture;
+            }
+            if (entity.material.roughness !== undefined) {
+                data.roughness = entity.material.roughness;
+            }
+            if (entity.material.metalness !== undefined) {
+                data.metalness = entity.material.metalness;
+            }
         }
 
-        // Параметры геометрии
+        // Сохраняем параметры геометрии
         if (entity.type === 'cube') {
             data.width = entity._width !== undefined ? entity._width : entity.geometry.parameters?.width || 1;
             data.height = entity._height !== undefined ? entity._height : entity.geometry.parameters?.height || 1;
@@ -109,6 +122,34 @@
             data.openEnded = entity._openEnded !== undefined ? entity._openEnded : entity.geometry.parameters?.openEnded || false;
         }
 
+        // Сохраняем ВСЕ вершины геометрии для любого модифицированного объекта
+        const geometry = entity.geometry;
+        if (geometry && geometry.attributes && geometry.attributes.position) {
+            const position = geometry.attributes.position;
+            const positions = position.array.slice();
+            
+            const isModified = entity.userData.stencilApplied || 
+                              entity.userData.geometryModified ||
+                              (entity.type === 'cylinder' && entity.userData.stencilApplied !== undefined);
+            
+            if (isModified) {
+                data.modifiedGeometry = {
+                    positions: Array.from(positions),
+                    vertexCount: positions.length / 3,
+                    stencilShape: entity.userData.stencilShape || null,
+                    stencilSize: entity.userData.stencilSize || null,
+                };
+                console.log(`💾 Saved modified geometry for ${entity.userData.name} (${positions.length / 3} vertices)`);
+            }
+        }
+
+        // Сохраняем флаг применения трафарета
+        if (entity.userData.stencilApplied) {
+            data.stencilApplied = true;
+            data.stencilShape = entity.userData.stencilShape;
+            data.stencilSize = entity.userData.stencilSize;
+        }
+
         return data;
     }
 
@@ -123,14 +164,12 @@
 
         this.isRestoring = true;
         try {
-            // Создаем карту существующих объектов
             const existingEntities = this.editor.sceneManager.getAllEntities();
             const existingMap = new Map();
             existingEntities.forEach(entity => {
                 existingMap.set(entity.userData.id, entity);
             });
 
-            // Создаем карту объектов из снимка
             const newMap = new Map();
             state.objects.forEach(objData => {
                 newMap.set(objData.id, objData);
@@ -165,11 +204,8 @@
                 this.editor.selectionManager.clear();
             }
 
-            // 4. Обновляем UI
             this.editor.uiManager.updateUI();
-
             console.log(`✅ State restored: ${state.objects.length} objects, action: ${state.action}`);
-
         } catch (error) {
             console.error('❌ Error restoring state:', error);
         } finally {
@@ -181,7 +217,6 @@
      * Обновляет существующий объект
      */
     _updateEntity(entity, data) {
-        // Трансформации
         if (data.position) {
             entity.position.set(data.position.x, data.position.y, data.position.z);
         }
@@ -191,13 +226,11 @@
         if (data.scale) {
             entity.scale.set(data.scale.x, data.scale.y, data.scale.z);
         }
-
-        // Имя
         if (data.name) {
             entity.userData.name = data.name;
         }
 
-        // Материал
+        // Обновляем материал
         if (entity.material) {
             if (data.color !== undefined) {
                 entity.material.color.setHex(data.color);
@@ -209,6 +242,94 @@
                 entity.material.transparent = data.transparent !== undefined ? data.transparent : data.opacity < 1;
                 entity.material.opacity = data.opacity;
                 entity.material.needsUpdate = true;
+            }
+            if (data.roughness !== undefined) {
+                entity.material.roughness = data.roughness;
+            }
+            if (data.metalness !== undefined) {
+                entity.material.metalness = data.metalness;
+            }
+
+            if (data.materialType) {
+                entity.userData.materialType = data.materialType;
+                const materialManager = this.editor.materialManager;
+                if (materialManager && data.materialType) {
+                    const texture = data.texture || null;
+                    const color = data.color || entity.material.color.getHex();
+                    const opacity = data.opacity || entity.material.opacity || 1;
+                    const transparent = data.transparent !== undefined ? data.transparent : opacity < 1;
+                    
+                    const newMaterial = materialManager.createMaterial(data.materialType, {
+                        color: color,
+                        roughness: data.roughness || entity.material.roughness || 0.3,
+                        metalness: data.metalness || entity.material.metalness || 0.1,
+                        transparent: transparent,
+                        opacity: opacity,
+                        texture: texture,
+                    });
+                    
+                    const oldMaterial = entity.material;
+                    entity.material = newMaterial;
+                    entity.material.needsUpdate = true;
+                    if (oldMaterial && oldMaterial !== newMaterial && oldMaterial.dispose) {
+                        oldMaterial.dispose();
+                    }
+                    if (data.texture) {
+                        entity.userData.texture = data.texture;
+                    }
+                }
+            } else if (data.texture) {
+                const materialManager = this.editor.materialManager;
+                if (materialManager) {
+                    const color = data.color || entity.material.color.getHex();
+                    const opacity = data.opacity || entity.material.opacity || 1;
+                    const transparent = data.transparent !== undefined ? data.transparent : opacity < 1;
+                    const newMaterial = materialManager.createMaterial(MATERIAL_TYPES.STANDARD, {
+                        color: color,
+                        roughness: data.roughness || entity.material.roughness || 0.3,
+                        metalness: data.metalness || entity.material.metalness || 0.1,
+                        transparent: transparent,
+                        opacity: opacity,
+                        texture: data.texture,
+                    });
+                    const oldMaterial = entity.material;
+                    entity.material = newMaterial;
+                    entity.material.needsUpdate = true;
+                    if (oldMaterial && oldMaterial !== newMaterial && oldMaterial.dispose) {
+                        oldMaterial.dispose();
+                    }
+                    entity.userData.texture = data.texture;
+                    entity.userData.materialType = MATERIAL_TYPES.STANDARD;
+                }
+            }
+        }
+
+        // Восстановление модифицированной геометрии
+        if (data.modifiedGeometry) {
+            const geometry = entity.geometry;
+            if (geometry && geometry.attributes && geometry.attributes.position) {
+                const positions = data.modifiedGeometry.positions;
+                if (positions && positions.length > 0) {
+                    const positionAttr = geometry.attributes.position;
+                    positionAttr.array = new Float32Array(positions);
+                    positionAttr.needsUpdate = true;
+                    geometry.computeVertexNormals();
+                    
+                    if (data.stencilApplied) {
+                        entity.userData.stencilApplied = true;
+                        entity.userData.stencilShape = data.stencilShape;
+                        entity.userData.stencilSize = data.stencilSize;
+                    }
+                    if (data.stencilApplied || data.stencilShape) {
+                        entity.userData.geometryModified = true;
+                    }
+                    console.log(`🔧 Restored modified geometry for ${entity.userData.name}`);
+                }
+            }
+        } else {
+            if (entity.userData.stencilApplied) {
+                entity.userData.stencilApplied = false;
+                entity.userData.geometryModified = false;
             }
         }
 
@@ -261,7 +382,6 @@
      */
     _createEntity(data) {
         let entity = null;
-        
         switch (data.type) {
             case 'cube':
                 entity = this.editor.shapeManager.createCube({
@@ -273,6 +393,8 @@
                     segments: data.segments || 1,
                     transparent: data.transparent || false,
                     opacity: data.opacity || 1,
+                    roughness: data.roughness || 0.3,
+                    metalness: data.metalness || 0.1,
                 });
                 break;
             case 'sphere':
@@ -284,6 +406,8 @@
                     heightSegments: data.heightSegments || 32,
                     transparent: data.transparent || false,
                     opacity: data.opacity || 1,
+                    roughness: data.roughness || 0.3,
+                    metalness: data.metalness || 0.1,
                 });
                 break;
             case 'cylinder':
@@ -298,6 +422,8 @@
                     openEnded: data.openEnded || false,
                     transparent: data.transparent || false,
                     opacity: data.opacity || 1,
+                    roughness: data.roughness || 0.3,
+                    metalness: data.metalness || 0.1,
                 });
                 break;
             default:
@@ -307,6 +433,88 @@
 
         if (entity && data.id) {
             entity.userData.id = data.id;
+        }
+
+        if (entity && data.position) {
+            entity.position.set(data.position.x, data.position.y, data.position.z);
+        }
+        if (entity && data.rotation) {
+            entity.rotation.set(data.rotation.x, data.rotation.y, data.rotation.z);
+        }
+        if (entity && data.scale) {
+            entity.scale.set(data.scale.x, data.scale.y, data.scale.z);
+        }
+
+        // Восстанавливаем материал
+        if (entity && data.materialType && this.editor.materialManager) {
+            const materialManager = this.editor.materialManager;
+            const color = data.color || entity.material.color.getHex();
+            const opacity = data.opacity || entity.material.opacity || 1;
+            const transparent = data.transparent !== undefined ? data.transparent : opacity < 1;
+            const texture = data.texture || null;
+            
+            const newMaterial = materialManager.createMaterial(data.materialType, {
+                color: color,
+                roughness: data.roughness || entity.material.roughness || 0.3,
+                metalness: data.metalness || entity.material.metalness || 0.1,
+                transparent: transparent,
+                opacity: opacity,
+                texture: texture,
+            });
+            
+            const oldMaterial = entity.material;
+            entity.material = newMaterial;
+            entity.material.needsUpdate = true;
+            if (oldMaterial && oldMaterial !== newMaterial && oldMaterial.dispose) {
+                oldMaterial.dispose();
+            }
+            entity.userData.materialType = data.materialType;
+            if (data.texture) {
+                entity.userData.texture = data.texture;
+            }
+        } else if (entity && data.texture && this.editor.materialManager) {
+            const materialManager = this.editor.materialManager;
+            const color = data.color || entity.material.color.getHex();
+            const opacity = data.opacity || entity.material.opacity || 1;
+            const transparent = data.transparent !== undefined ? data.transparent : opacity < 1;
+            const newMaterial = materialManager.createMaterial(MATERIAL_TYPES.STANDARD, {
+                color: color,
+                roughness: data.roughness || entity.material.roughness || 0.3,
+                metalness: data.metalness || entity.material.metalness || 0.1,
+                transparent: transparent,
+                opacity: opacity,
+                texture: data.texture,
+            });
+            const oldMaterial = entity.material;
+            entity.material = newMaterial;
+            entity.material.needsUpdate = true;
+            if (oldMaterial && oldMaterial !== newMaterial && oldMaterial.dispose) {
+                oldMaterial.dispose();
+            }
+            entity.userData.texture = data.texture;
+            entity.userData.materialType = MATERIAL_TYPES.STANDARD;
+        }
+
+        // Восстановление модифицированной геометрии для нового объекта
+        if (entity && data.modifiedGeometry) {
+            const geometry = entity.geometry;
+            if (geometry && geometry.attributes && geometry.attributes.position) {
+                const positions = data.modifiedGeometry.positions;
+                if (positions && positions.length > 0) {
+                    const positionAttr = geometry.attributes.position;
+                    positionAttr.array = new Float32Array(positions);
+                    positionAttr.needsUpdate = true;
+                    geometry.computeVertexNormals();
+                    
+                    if (data.stencilApplied) {
+                        entity.userData.stencilApplied = true;
+                        entity.userData.stencilShape = data.stencilShape;
+                        entity.userData.stencilSize = data.stencilSize;
+                    }
+                    entity.userData.geometryModified = true;
+                    console.log(`🔧 Restored modified geometry for ${entity.userData.name}`);
+                }
+            }
         }
 
         return entity;
@@ -323,6 +531,7 @@
         this._isInGroup = true;
         this._groupName = groupName;
         this._groupStartState = this.captureState(`group_start_${groupName}`);
+        this._groupCommands = [];
         console.log(`📦 Group started: ${groupName}`);
     }
 
@@ -334,39 +543,32 @@
             this._isInGroup = false;
             this._groupName = null;
             this._groupStartState = null;
+            this._groupCommands = [];
             console.log('📦 Group ended (empty)');
             return;
         }
 
-        // Создаем конечное состояние
         const endState = this.captureState(`group_end_${this._groupName}`);
-        
-        // Проверяем, изменилось ли состояние
         if (this._statesEqual(this._groupStartState, endState)) {
             console.log('📦 No changes in group, skipping');
             this._isInGroup = false;
             this._groupName = null;
             this._groupStartState = null;
+            this._groupCommands = [];
             return;
         }
 
-        // Сохраняем как один шаг с именем группы
         this._pushState(endState, this._groupName);
-
         this._isInGroup = false;
         this._groupName = null;
         this._groupStartState = null;
+        this._groupCommands = [];
         console.log(`📦 Group ended: ${this._groupName}`);
     }
 
-    /**
-     * Сравнивает два состояния
-     */
     _statesEqual(state1, state2) {
         if (!state1 || !state2) return false;
         if (state1.objects.length !== state2.objects.length) return false;
-        
-        // Сравниваем каждый объект
         for (let i = 0; i < state1.objects.length; i++) {
             const obj1 = state1.objects[i];
             const obj2 = state2.objects[i];
@@ -375,46 +577,36 @@
         return true;
     }
 
-    /**
-     * Сравнивает два объекта
-     */
     _objectsEqual(obj1, obj2) {
         if (!obj1 || !obj2) return false;
         if (obj1.id !== obj2.id) return false;
         if (obj1.type !== obj2.type) return false;
-        
-        // Проверяем позицию
-        const pos1 = obj1.position;
-        const pos2 = obj2.position;
+
         const eps = 0.0001;
-        if (Math.abs(pos1.x - pos2.x) > eps ||
-            Math.abs(pos1.y - pos2.y) > eps ||
-            Math.abs(pos1.z - pos2.z) > eps) return false;
-        
-        // Проверяем поворот
-        const rot1 = obj1.rotation;
-        const rot2 = obj2.rotation;
-        if (Math.abs(rot1.x - rot2.x) > eps ||
-            Math.abs(rot1.y - rot2.y) > eps ||
-            Math.abs(rot1.z - rot2.z) > eps) return false;
-        
-        // Проверяем масштаб
-        const scale1 = obj1.scale;
-        const scale2 = obj2.scale;
-        if (Math.abs(scale1.x - scale2.x) > eps ||
-            Math.abs(scale1.y - scale2.y) > eps ||
-            Math.abs(scale1.z - scale2.z) > eps) return false;
-        
-        // Проверяем цвет
-        if (obj1.color !== undefined && obj2.color !== undefined) {
-            if (obj1.color !== obj2.color) return false;
+        const pos1 = obj1.position, pos2 = obj2.position;
+        if (Math.abs(pos1.x - pos2.x) > eps || Math.abs(pos1.y - pos2.y) > eps || Math.abs(pos1.z - pos2.z) > eps) return false;
+
+        const rot1 = obj1.rotation, rot2 = obj2.rotation;
+        if (Math.abs(rot1.x - rot2.x) > eps || Math.abs(rot1.y - rot2.y) > eps || Math.abs(rot1.z - rot2.z) > eps) return false;
+
+        const scale1 = obj1.scale, scale2 = obj2.scale;
+        if (Math.abs(scale1.x - scale2.x) > eps || Math.abs(scale1.y - scale2.y) > eps || Math.abs(scale1.z - scale2.z) > eps) return false;
+
+        if (obj1.color !== undefined && obj2.color !== undefined && obj1.color !== obj2.color) return false;
+        if (obj1.opacity !== undefined && obj2.opacity !== undefined && Math.abs(obj1.opacity - obj2.opacity) > eps) return false;
+        if (obj1.materialType !== undefined && obj2.materialType !== undefined && obj1.materialType !== obj2.materialType) return false;
+        if (obj1.texture !== undefined && obj2.texture !== undefined && obj1.texture !== obj2.texture) return false;
+
+        if (obj1.modifiedGeometry !== undefined && obj2.modifiedGeometry !== undefined) {
+            const pos1 = obj1.modifiedGeometry.positions;
+            const pos2 = obj2.modifiedGeometry.positions;
+            if (pos1 && pos2 && pos1.length === pos2.length) {
+                for (let i = 0; i < pos1.length; i++) {
+                    if (Math.abs(pos1[i] - pos2[i]) > eps) return false;
+                }
+            }
         }
-        
-        // Проверяем прозрачность
-        if (obj1.opacity !== undefined && obj2.opacity !== undefined) {
-            if (Math.abs(obj1.opacity - obj2.opacity) > eps) return false;
-        }
-        
+
         return true;
     }
 
@@ -426,25 +618,24 @@
             console.log('⏭️ Skipping push - restoring');
             return;
         }
-
         if (this.isExecuting) {
             console.log('⏭️ Skipping push - executing');
             return;
         }
-
         if (!state) {
             console.log('⏭️ No state to push');
             return;
         }
 
-        // Обрезаем историю до текущего индекса
-        this.history = this.history.slice(0, this.currentIndex + 1);
-        
-        // Добавляем новое состояние
+        const stepsToRemove = this.history.length - this.currentIndex - 1;
+        if (stepsToRemove > 0) {
+            this.history.splice(this.currentIndex + 1, stepsToRemove);
+            console.log(`🗑️ Removed ${stepsToRemove} future steps (history truncated)`);
+        }
+
         this.history.push(state);
         this.currentIndex = this.history.length - 1;
 
-        // Ограничиваем размер
         if (this.history.length > this.maxCommands) {
             const removeCount = this.history.length - this.maxCommands;
             this.history.splice(0, removeCount);
@@ -455,23 +646,53 @@
         this.notifyListeners();
     }
 
-    /**
-     * Записывает действие в историю
-     */
-    push(actionName = 'unknown') {
+    push(actionName = 'unknown', force = false) {
         if (this.isRestoring) return;
+
         if (this._isInGroup) {
-            console.log(`📝 Adding to group: ${actionName}`);
+            this._groupCommands.push(actionName);
+            console.log(`📝 Adding to group: ${actionName} (${this._groupCommands.length} commands)`);
             return;
         }
-        const state = this.captureState(actionName);
-        this._pushState(state, actionName);
+
+        if (force) {
+            const state = this.captureState(actionName);
+            this._pushState(state, actionName);
+            return;
+        }
+
+        if (this._pushTimeout) {
+            clearTimeout(this._pushTimeout);
+        }
+
+        this._pendingPush = actionName;
+        this._pushTimeout = setTimeout(() => {
+            if (this._pendingPush) {
+                const state = this.captureState(this._pendingPush);
+                this._pushState(state, this._pendingPush);
+                this._pendingPush = null;
+            }
+            this._pushTimeout = null;
+        }, 50);
     }
 
-    /**
-     * Откат на один шаг назад (Undo)
-     */
+    flush() {
+        if (this._pushTimeout) {
+            clearTimeout(this._pushTimeout);
+            this._pushTimeout = null;
+        }
+        if (this._pendingPush) {
+            const state = this.captureState(this._pendingPush);
+            this._pushState(state, this._pendingPush);
+            this._pendingPush = null;
+        }
+        if (this._isInGroup) {
+            this.endGroup();
+        }
+    }
+
     undo() {
+        this.flush();
         if (this.isExecuting) return false;
         if (this._isInGroup) {
             console.warn('⚠️ Cannot undo while in group');
@@ -498,10 +719,8 @@
         }
     }
 
-    /**
-     * Повтор команды (Redo)
-     */
     redo() {
+        this.flush();
         if (this.isExecuting) return false;
         if (this._isInGroup) {
             console.warn('⚠️ Cannot redo while in group');
@@ -545,22 +764,22 @@
         };
     }
 
-    /**
-     * Очищает всю историю
-     */
     clear() {
         this.history = [];
         this.currentIndex = -1;
         this._isInGroup = false;
         this._groupName = null;
         this._groupStartState = null;
+        this._groupCommands = [];
+        if (this._pushTimeout) {
+            clearTimeout(this._pushTimeout);
+            this._pushTimeout = null;
+        }
+        this._pendingPush = null;
         console.log('🧹 History cleared');
         this.notifyListeners();
     }
 
-    /**
-     * Сохраняет начальное состояние
-     */
     saveInitialState() {
         this.clear();
         const state = this.captureState('initial');
@@ -571,39 +790,47 @@
     }
 
     /**
-     * Сериализует историю в JSON
+     * Сериализует ВСЮ историю для сохранения проекта
      */
     serialize() {
+        this.flush();
         return {
-            version: '8.0',
+            version: '9.2',
             timestamp: Date.now(),
             history: this.history,
-            currentIndex: this.currentIndex
+            currentIndex: this.currentIndex,
+            objectCount: this.history[this.currentIndex]?.objects?.length || 0
         };
     }
 
     /**
-     * Десериализует историю из JSON
+     * Десериализует проект из сохраненного состояния
      */
     deserialize(data) {
-        if (!data || !data.history) return;
+        if (!data) return;
         
         this.isRestoring = true;
         try {
-            this.history = data.history;
-            this.currentIndex = data.currentIndex !== undefined 
-                ? data.currentIndex 
-                : this.history.length - 1;
-            
-            // Восстанавливаем состояние
-            if (this.currentIndex >= 0 && this.currentIndex < this.history.length) {
-                this.restoreState(this.history[this.currentIndex]);
+            if (data.history && data.history.length > 0) {
+                this.history = data.history;
+                this.currentIndex = data.currentIndex !== undefined ? data.currentIndex : this.history.length - 1;
+                if (this.currentIndex >= 0 && this.currentIndex < this.history.length) {
+                    this.restoreState(this.history[this.currentIndex]);
+                }
+                console.log(`📂 Project restored with ${this.history.length} history steps, index: ${this.currentIndex}`);
+            } else if (data.state) {
+                this.history = [data.state];
+                this.currentIndex = 0;
+                this.restoreState(data.state);
+                console.log(`📂 Project restored from single state (legacy format)`);
+            } else {
+                console.warn('⚠️ No valid history found in project data');
+                this.saveInitialState();
             }
-            
-            console.log(`📂 History restored: ${this.history.length} steps`);
             this.notifyListeners();
         } catch (error) {
-            console.error('❌ Error deserializing history:', error);
+            console.error('❌ Error deserializing project:', error);
+            this.saveInitialState();
         } finally {
             this.isRestoring = false;
         }

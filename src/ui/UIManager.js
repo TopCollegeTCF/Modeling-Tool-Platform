@@ -5,6 +5,7 @@ import { PropertiesUI } from './PropertiesUI.js';
 import { SceneTreeUI } from './SceneTreeUI.js';
 import { SpawnUI } from './SpawnUI.js';
 import { SettingsUI } from './SettingsUI.js';
+import { StencilUI } from './StencilUI.js';
 
 export class UIManager {
     constructor(editor) {
@@ -15,9 +16,11 @@ export class UIManager {
         this.sceneTree = new SceneTreeUI(editor);
         this.spawn = new SpawnUI(editor);
         this.settings = new SettingsUI(editor);
+        this.stencil = new StencilUI(editor);
         this.uiElements = [];
         this.project = new ProjectUI(editor);
         this.editor.projectUI = this.project;
+        this.editor.stencilUI = this.stencil;
     }
 
     init() {
@@ -30,6 +33,7 @@ export class UIManager {
         this.sceneTree.init();
         this.spawn.init();
         this.settings.init();
+        this.stencil.init();
 
         // Регистрируем панели в PanelService
         if (this.editor.panelService) {

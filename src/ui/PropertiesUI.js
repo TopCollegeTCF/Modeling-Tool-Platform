@@ -11,11 +11,13 @@
  * - Поворота (X, Y, Z в градусах)
  * - Масштаба (X, Y, Z)
  * - Параметров геометрии (сегменты)
+ * - Материала и текстуры
  *
  */
 import { UI_TEMPLATES, renderTemplate } from '../configs/ui-templates.js';
 import { ICONS } from '../configs/icons.js';
 import { COLORS } from '../configs/colors.js';
+import { MATERIAL_TYPES } from '../services/MaterialManager.js';
 import * as THREE from 'three';
 
 export class PropertiesUI {
@@ -53,13 +55,22 @@ export class PropertiesUI {
              box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
          `;
 
-        // Стили для скролла
         const style = document.createElement('style');
         style.textContent = `
              #properties::-webkit-scrollbar { width: 3px; }
              #properties::-webkit-scrollbar-track { background: transparent; }
              #properties::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 2px; }
              #properties::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.25); }
+             #properties select {
+                 cursor: pointer;
+             }
+             #properties select:hover {
+                 border-color: rgba(74,158,255,0.5);
+             }
+             #properties select option {
+                 background: #1a1a2e;
+                 color: #fff;
+             }
          `;
         this.element.appendChild(style);
 
@@ -67,12 +78,11 @@ export class PropertiesUI {
         this.applyTheme(this.currentTheme);
         this.update();
 
-        // Подписываемся на изменения выделения
         this.editor.selectionManager.addListener(() => {
             this.update();
         });
 
-        console.log('✅ PropertiesUI initialized');
+        console.log('✅ PropertiesUI v2.1 initialized');
     }
 
     getCurrentTheme() {
@@ -221,6 +231,9 @@ export class PropertiesUI {
              </div>
          `;
 
+        // Material section
+        html += this._renderMaterialSection(entity, colors, labelStyle);
+
         // Transform: Position
         html += this._renderTransformInput('position', 'Position', pos, 0.1, colors, labelStyle, inputStyle);
 
@@ -241,6 +254,76 @@ export class PropertiesUI {
         this.element.innerHTML = html;
     }
 
+    _renderMaterialSection(entity, colors, labelStyle) {
+        const materialManager = this.editor.materialManager;
+        if (!materialManager) return '';
+
+        const currentType = entity.userData.materialType || MATERIAL_TYPES.STANDARD;
+        const currentTexture = entity.userData.texture || null;
+
+        const materialTypes = [
+            MATERIAL_TYPES.STANDARD,
+            MATERIAL_TYPES.BASIC,
+            MATERIAL_TYPES.PHONG,
+            MATERIAL_TYPES.LAMBERT,
+            MATERIAL_TYPES.TOON,
+            MATERIAL_TYPES.WIREFRAME
+        ];
+
+        const textures = materialManager.getAvailableTextures() || [];
+
+        let html = `
+             <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid ${colors.border};">
+                 <label style="${labelStyle}">🎨 Material Type</label>
+                 <select id="prop-material-type" style="width:100%; padding:4px 6px;
+                         background:${colors.input.background}; border:1px solid ${colors.input.border};
+                         border-radius:3px; color:${colors.input.color}; font-size:11px;
+                         margin-bottom:6px; cursor:pointer;">
+         `;
+
+        materialTypes.forEach(type => {
+            const label = materialManager.getMaterialTypeLabel(type) || type;
+            const selected = type === currentType ? 'selected' : '';
+            html += `<option value="${type}" ${selected}>${label}</option>`;
+        });
+
+        html += `</select>`;
+
+        // Texture select
+        html += `
+             <label style="${labelStyle}">🖼️ Texture</label>
+             <select id="prop-texture" style="width:100%; padding:4px 6px;
+                     background:${colors.input.background}; border:1px solid ${colors.input.border};
+                     border-radius:3px; color:${colors.input.color}; font-size:11px;
+                     cursor:pointer;">
+                 <option value="none" ${!currentTexture ? 'selected' : ''}>None</option>
+         `;
+
+        textures.forEach(name => {
+            const selected = name === currentTexture ? 'selected' : '';
+            const displayName = name.charAt(0).toUpperCase() + name.slice(1);
+            html += `<option value="${name}" ${selected}>${displayName}</option>`;
+        });
+
+        html += `</select>`;
+
+        // Show current texture preview if exists
+        if (currentTexture) {
+            const tex = materialManager.getTexture(currentTexture);
+            if (tex) {
+                html += `
+                     <div style="margin-top: 4px; padding: 4px; background: ${colors.surfaceLight}; border-radius: 3px; text-align: center;">
+                         <span style="color: ${colors.text.muted}; font-size: 8px;">✓ ${currentTexture}</span>
+                     </div>
+                 `;
+            }
+        }
+
+        html += `</div>`;
+
+        return html;
+    }
+
     _renderTransformInput(prop, label, values, step, colors, labelStyle, inputStyle) {
         const axes = ['x', 'y', 'z'];
         const inputs = axes.map(axis => {
@@ -248,7 +331,7 @@ export class PropertiesUI {
             const formattedVal = typeof val === 'number' ? val.toFixed(step < 1 ? 2 : 0) : val;
             const minAttr = prop === 'scale' ? 'min="0.01"' : '';
             return `
-                 <input class="prop-input" data-prop="${prop}" data-axis="${axis}" 
+                 <input class="prop-input" data-prop="${prop}" data-axis="${axis}"
                         type="number" value="${formattedVal}" step="${step}" ${minAttr}
                         style="${inputStyle}">
              `;
@@ -442,6 +525,77 @@ export class PropertiesUI {
             });
         }
 
+        // Материал и текстура - с записью в историю
+        const materialSelect = this.element.querySelector('#prop-material-type');
+        if (materialSelect) {
+            let oldValue = entity.userData.materialType || MATERIAL_TYPES.STANDARD;
+
+            materialSelect.addEventListener('focus', () => {
+                oldValue = entity.userData.materialType || MATERIAL_TYPES.STANDARD;
+            });
+
+            materialSelect.addEventListener('change', () => {
+                const type = materialSelect.value;
+                const entity = this._selectedEntity;
+                if (entity && this.editor.materialManager) {
+                    const textureSelect = this.element.querySelector('#prop-texture');
+                    const texture = textureSelect && textureSelect.value !== 'none' ? textureSelect.value : null;
+
+                    // Применяем материал
+                    this.editor.materialManager.applyMaterial(entity, type, { texture });
+
+                    // ⭐ ЗАПИСЫВАЕМ В ИСТОРИЮ
+                    this.editor.commandManager.push('changeMaterial');
+
+                    this.editor.uiManager.updateUI();
+                    console.log(`🎨 Material changed: ${type}, texture: ${texture || 'none'}`);
+                }
+            });
+
+            materialSelect.addEventListener('blur', () => {
+                const newValue = entity.userData.materialType || MATERIAL_TYPES.STANDARD;
+                if (oldValue !== newValue) {
+                    // Убеждаемся, что действие записано
+                    this.editor.commandManager.push('changeMaterial', true);
+                    console.log(`🎨 Material type changed: ${oldValue} → ${newValue}`);
+                }
+            });
+        }
+
+        // Texture select
+        const textureSelect = this.element.querySelector('#prop-texture');
+        if (textureSelect) {
+            let oldValue = entity.userData.texture || 'none';
+
+            textureSelect.addEventListener('focus', () => {
+                oldValue = entity.userData.texture || 'none';
+            });
+
+            textureSelect.addEventListener('change', () => {
+                const entity = this._selectedEntity;
+                if (entity && this.editor.materialManager) {
+                    const type = entity.userData.materialType || MATERIAL_TYPES.STANDARD;
+                    const texture = textureSelect.value !== 'none' ? textureSelect.value : null;
+
+                    this.editor.materialManager.applyMaterial(entity, type, { texture });
+
+                    // ⭐ ЗАПИСЫВАЕМ В ИСТОРИЮ
+                    this.editor.commandManager.push('changeMaterial');
+
+                    this.editor.uiManager.updateUI();
+                    console.log(`🖼️ Texture changed: ${texture || 'none'}`);
+                }
+            });
+
+            textureSelect.addEventListener('blur', () => {
+                const newValue = entity.userData.texture || 'none';
+                if (oldValue !== newValue) {
+                    this.editor.commandManager.push('changeMaterial', true);
+                    console.log(`🖼️ Texture changed: ${oldValue} → ${newValue}`);
+                }
+            });
+        }
+
         // Transform inputs (position, rotation, scale)
         this.element.querySelectorAll('.prop-input').forEach(input => {
             const prop = input.dataset.prop;
@@ -452,13 +606,6 @@ export class PropertiesUI {
             const getCurrentValue = () => {
                 if (prop === 'position') return entity.position[axis];
                 if (prop === 'rotation') return entity.rotation[axis] * 180 / Math.PI;
-                if (prop === 'scale') return entity.scale[axis];
-                return null;
-            };
-
-            const getEntityValue = () => {
-                if (prop === 'position') return entity.position[axis];
-                if (prop === 'rotation') return entity.rotation[axis];
                 if (prop === 'scale') return entity.scale[axis];
                 return null;
             };
@@ -479,7 +626,6 @@ export class PropertiesUI {
                     entity.scale[axis] = Math.max(0.01, value);
                 }
 
-                // Записываем в историю с задержкой
                 if (changeTimer) clearTimeout(changeTimer);
                 changeTimer = setTimeout(() => {
                     const newValue = getCurrentValue();

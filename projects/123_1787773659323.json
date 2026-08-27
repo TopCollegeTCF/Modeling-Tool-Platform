@@ -1,0 +1,851 @@
+{
+  "version": "9.0",
+  "timestamp": 1787773659319,
+  "history": [
+    {
+      "timestamp": 1787773415566,
+      "action": "initial",
+      "objects": [],
+      "selectionId": null
+    },
+    {
+      "timestamp": 1787773415731,
+      "action": "addCube",
+      "objects": [
+        {
+          "id": 1,
+          "name": "Cube",
+          "type": "cube",
+          "position": {
+            "x": 0,
+            "y": 0.5,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "color": 4890367,
+          "opacity": 1,
+          "transparent": false,
+          "materialType": "standard"
+        }
+      ],
+      "selectionId": 1
+    },
+    {
+      "timestamp": 1787773436599,
+      "action": "group_end_move",
+      "objects": [
+        {
+          "id": 1,
+          "name": "Cube",
+          "type": "cube",
+          "position": {
+            "x": 4.3,
+            "y": 0.5,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "color": 4890367,
+          "opacity": 1,
+          "transparent": false,
+          "materialType": "standard"
+        }
+      ],
+      "selectionId": 1
+    },
+    {
+      "timestamp": 1787773439587,
+      "action": "group_end_move",
+      "objects": [
+        {
+          "id": 1,
+          "name": "Cube",
+          "type": "cube",
+          "position": {
+            "x": 4.3,
+            "y": 0.5,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "color": 4890367,
+          "opacity": 1,
+          "transparent": false,
+          "materialType": "standard"
+        },
+        {
+          "id": 2,
+          "name": "Sphere",
+          "type": "sphere",
+          "position": {
+            "x": 2.8000000000000003,
+            "y": 0.5,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "color": 16739179,
+          "opacity": 1,
+          "transparent": false,
+          "materialType": "standard"
+        }
+      ],
+      "selectionId": 2
+    },
+    {
+      "timestamp": 1787773565050,
+      "action": "group_end_rotate",
+      "objects": [
+        {
+          "id": 1,
+          "name": "Cube",
+          "type": "cube",
+          "position": {
+            "x": 4.3,
+            "y": 0.5,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "color": 4890367,
+          "opacity": 1,
+          "transparent": false,
+          "materialType": "standard"
+        },
+        {
+          "id": 2,
+          "name": "Sphere",
+          "type": "sphere",
+          "position": {
+            "x": 0,
+            "y": 0.5,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "color": 16739179,
+          "opacity": 1,
+          "transparent": false,
+          "materialType": "standard"
+        }
+      ],
+      "selectionId": 2
+    },
+    {
+      "timestamp": 1787773568178,
+      "action": "stencilApply",
+      "objects": [
+        {
+          "id": 1,
+          "name": "Cube",
+          "type": "cube",
+          "position": {
+            "x": 4.3,
+            "y": 0.5,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "color": 4890367,
+          "opacity": 1,
+          "transparent": false,
+          "materialType": "standard"
+        },
+        {
+          "id": 2,
+          "name": "Sphere",
+          "type": "sphere",
+          "position": {
+            "x": 0,
+            "y": 0.5,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "color": 16739179,
+          "opacity": 1,
+          "transparent": false,
+          "materialType": "standard"
+        },
+        {
+          "id": 11,
+          "name": "Sphere (stencil)",
+          "type": "sphere",
+          "position": {
+            "x": 0,
+            "y": 0.5,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "color": 16739179,
+          "opacity": 1,
+          "transparent": false,
+          "materialType": "standard"
+        }
+      ],
+      "selectionId": 11
+    },
+    {
+      "timestamp": 1787773590411,
+      "action": "stencilApply",
+      "objects": [
+        {
+          "id": 1,
+          "name": "Cube",
+          "type": "cube",
+          "position": {
+            "x": 4.3,
+            "y": 0.5,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "color": 4890367,
+          "opacity": 1,
+          "transparent": false,
+          "materialType": "standard"
+        },
+        {
+          "id": 2,
+          "name": "Sphere",
+          "type": "sphere",
+          "position": {
+            "x": 0,
+            "y": 0.5,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "color": 16739179,
+          "opacity": 1,
+          "transparent": false,
+          "materialType": "standard"
+        },
+        {
+          "id": 11,
+          "name": "Sphere (stencil)",
+          "type": "sphere",
+          "position": {
+            "x": 0,
+            "y": 0.5,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "color": 16739179,
+          "opacity": 1,
+          "transparent": false,
+          "materialType": "standard"
+        },
+        {
+          "id": 12,
+          "name": "Sphere (stencil) (stencil)",
+          "type": "sphere",
+          "position": {
+            "x": 0,
+            "y": 0.5,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "color": 16739179,
+          "opacity": 1,
+          "transparent": false,
+          "materialType": "standard"
+        }
+      ],
+      "selectionId": 12
+    },
+    {
+      "timestamp": 1787773593939,
+      "action": "group_end_rotate",
+      "objects": [
+        {
+          "id": 1,
+          "name": "Cube",
+          "type": "cube",
+          "position": {
+            "x": 4.3,
+            "y": 0.5,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "color": 4890367,
+          "opacity": 1,
+          "transparent": false,
+          "materialType": "standard"
+        },
+        {
+          "id": 2,
+          "name": "Sphere",
+          "type": "sphere",
+          "position": {
+            "x": 0,
+            "y": 0.5,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "color": 16739179,
+          "opacity": 1,
+          "transparent": false,
+          "materialType": "standard"
+        },
+        {
+          "id": 11,
+          "name": "Sphere (stencil)",
+          "type": "sphere",
+          "position": {
+            "x": 0,
+            "y": 0.5,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "color": 16739179,
+          "opacity": 1,
+          "transparent": false,
+          "materialType": "standard"
+        },
+        {
+          "id": 12,
+          "name": "Sphere (stencil) (stencil)",
+          "type": "sphere",
+          "position": {
+            "x": -3.6,
+            "y": 1.7000000000000002,
+            "z": -0.4
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "color": 16739179,
+          "opacity": 1,
+          "transparent": false,
+          "materialType": "standard"
+        }
+      ],
+      "selectionId": 12
+    },
+    {
+      "timestamp": 1787773604328,
+      "action": "stencilApply",
+      "objects": [
+        {
+          "id": 1,
+          "name": "Cube",
+          "type": "cube",
+          "position": {
+            "x": 4.3,
+            "y": 0.5,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "color": 4890367,
+          "opacity": 1,
+          "transparent": false,
+          "materialType": "standard"
+        },
+        {
+          "id": 2,
+          "name": "Sphere",
+          "type": "sphere",
+          "position": {
+            "x": 0,
+            "y": 0.5,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "color": 16739179,
+          "opacity": 1,
+          "transparent": false,
+          "materialType": "standard"
+        },
+        {
+          "id": 11,
+          "name": "Sphere (stencil)",
+          "type": "sphere",
+          "position": {
+            "x": 0,
+            "y": 0.5,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "color": 16739179,
+          "opacity": 1,
+          "transparent": false,
+          "materialType": "standard"
+        },
+        {
+          "id": 12,
+          "name": "Sphere (stencil) (stencil)",
+          "type": "sphere",
+          "position": {
+            "x": -3.6,
+            "y": 1.7000000000000002,
+            "z": -0.4
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "color": 16739179,
+          "opacity": 1,
+          "transparent": false,
+          "materialType": "standard"
+        },
+        {
+          "id": 13,
+          "name": "Cube (stencil)",
+          "type": "cube",
+          "position": {
+            "x": 4.3,
+            "y": 0.5,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "color": 4890367,
+          "opacity": 1,
+          "transparent": false,
+          "materialType": "standard"
+        }
+      ],
+      "selectionId": 13
+    },
+    {
+      "timestamp": 1787773607104,
+      "action": "group_end_rotate",
+      "objects": [
+        {
+          "id": 1,
+          "name": "Cube",
+          "type": "cube",
+          "position": {
+            "x": 2.5,
+            "y": 0.5,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "color": 4890367,
+          "opacity": 1,
+          "transparent": false,
+          "materialType": "standard"
+        },
+        {
+          "id": 2,
+          "name": "Sphere",
+          "type": "sphere",
+          "position": {
+            "x": 0,
+            "y": 0.5,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "color": 16739179,
+          "opacity": 1,
+          "transparent": false,
+          "materialType": "standard"
+        },
+        {
+          "id": 11,
+          "name": "Sphere (stencil)",
+          "type": "sphere",
+          "position": {
+            "x": 0,
+            "y": 0.5,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "color": 16739179,
+          "opacity": 1,
+          "transparent": false,
+          "materialType": "standard"
+        },
+        {
+          "id": 12,
+          "name": "Sphere (stencil) (stencil)",
+          "type": "sphere",
+          "position": {
+            "x": -3.6,
+            "y": 1.7000000000000002,
+            "z": -0.4
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "color": 16739179,
+          "opacity": 1,
+          "transparent": false,
+          "materialType": "standard"
+        },
+        {
+          "id": 13,
+          "name": "Cube (stencil)",
+          "type": "cube",
+          "position": {
+            "x": 4.3,
+            "y": 0.5,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "color": 4890367,
+          "opacity": 1,
+          "transparent": false,
+          "materialType": "standard"
+        }
+      ],
+      "selectionId": 1
+    },
+    {
+      "timestamp": 1787773614017,
+      "action": "group_end_rotate",
+      "objects": [
+        {
+          "id": 1,
+          "name": "Cube",
+          "type": "cube",
+          "position": {
+            "x": 2.5,
+            "y": 0.5,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "color": 4890367,
+          "opacity": 1,
+          "transparent": false,
+          "materialType": "standard"
+        },
+        {
+          "id": 2,
+          "name": "Sphere",
+          "type": "sphere",
+          "position": {
+            "x": 0,
+            "y": 0.5,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "color": 16739179,
+          "opacity": 1,
+          "transparent": false,
+          "materialType": "standard"
+        },
+        {
+          "id": 11,
+          "name": "Sphere (stencil)",
+          "type": "sphere",
+          "position": {
+            "x": 0,
+            "y": 0.5,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "color": 16739179,
+          "opacity": 1,
+          "transparent": false,
+          "materialType": "standard"
+        },
+        {
+          "id": 12,
+          "name": "Sphere (stencil) (stencil)",
+          "type": "sphere",
+          "position": {
+            "x": -3.6,
+            "y": 1.7000000000000002,
+            "z": -0.4
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "color": 16739179,
+          "opacity": 1,
+          "transparent": false,
+          "materialType": "standard"
+        },
+        {
+          "id": 13,
+          "name": "Cube (stencil)",
+          "type": "cube",
+          "position": {
+            "x": 4.3,
+            "y": 2,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "color": 4890367,
+          "opacity": 1,
+          "transparent": false,
+          "materialType": "standard"
+        }
+      ],
+      "selectionId": 13
+    }
+  ],
+  "currentIndex": 10
+}

@@ -3,6 +3,7 @@ import { MoveTool } from './MoveTool.js';
 import { ScaleTool } from './ScaleTool.js';
 import { RotateTool } from './RotateTool.js';
 import { DuplicateTool } from './DuplicateTool.js';
+import { StencilTool } from './StencilTool.js';
 
 export class ToolManager {
     constructor(editor) {
@@ -19,6 +20,7 @@ export class ToolManager {
         this.registerTool('scale', new ScaleTool(this.editor));
         this.registerTool('rotate', new RotateTool(this.editor));
         this.registerTool('duplicate', new DuplicateTool(this.editor));
+        this.registerTool('stencil', new StencilTool(this.editor));
 
         // Активируем select по умолчанию
         this.switchTool('select');

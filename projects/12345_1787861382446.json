@@ -1,0 +1,614 @@
+{
+  "version": "9.0",
+  "timestamp": 1787861382442,
+  "history": [
+    {
+      "timestamp": 1787861331176,
+      "action": "initial",
+      "objects": [],
+      "selectionId": null
+    },
+    {
+      "timestamp": 1787861331330,
+      "action": "addCube",
+      "objects": [
+        {
+          "id": 1,
+          "name": "Cube",
+          "type": "cube",
+          "position": {
+            "x": 0,
+            "y": 0.5,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "color": 4890367,
+          "opacity": 1,
+          "transparent": false,
+          "materialType": "standard"
+        }
+      ],
+      "selectionId": 1
+    },
+    {
+      "timestamp": 1787861335816,
+      "action": "group_end_select",
+      "objects": [
+        {
+          "id": 1,
+          "name": "Cube",
+          "type": "cube",
+          "position": {
+            "x": -4.078821170294847,
+            "y": 0.5,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "color": 4890367,
+          "opacity": 1,
+          "transparent": false,
+          "materialType": "standard"
+        }
+      ],
+      "selectionId": 1
+    },
+    {
+      "timestamp": 1787861341400,
+      "action": "stencilApply",
+      "objects": [
+        {
+          "id": 1,
+          "name": "Cube",
+          "type": "cube",
+          "position": {
+            "x": -4.078821170294847,
+            "y": 0.5,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "color": 4890367,
+          "opacity": 1,
+          "transparent": false,
+          "materialType": "standard"
+        },
+        {
+          "id": 2,
+          "name": "Sphere",
+          "type": "sphere",
+          "position": {
+            "x": 1.5,
+            "y": 0.5,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "color": 16739179,
+          "opacity": 1,
+          "transparent": false,
+          "materialType": "standard"
+        },
+        {
+          "id": 3,
+          "name": "Sphere (circle)",
+          "type": "sphere",
+          "position": {
+            "x": 1.5,
+            "y": 0,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "color": 16739179,
+          "opacity": 1,
+          "transparent": false,
+          "materialType": "standard"
+        }
+      ],
+      "selectionId": 3
+    },
+    {
+      "timestamp": 1787861353616,
+      "action": "group_end_select",
+      "objects": [
+        {
+          "id": 1,
+          "name": "Cube",
+          "type": "cube",
+          "position": {
+            "x": -4.078821170294847,
+            "y": 0.5,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "color": 4890367,
+          "opacity": 1,
+          "transparent": false,
+          "materialType": "standard"
+        },
+        {
+          "id": 2,
+          "name": "Sphere",
+          "type": "sphere",
+          "position": {
+            "x": 1.5,
+            "y": 0.5,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "color": 16739179,
+          "opacity": 1,
+          "transparent": false,
+          "materialType": "standard"
+        },
+        {
+          "id": 3,
+          "name": "Sphere (circle)",
+          "type": "sphere",
+          "position": {
+            "x": -7.786161165490348,
+            "y": 0,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "color": 16739179,
+          "opacity": 1,
+          "transparent": false,
+          "materialType": "standard"
+        },
+        {
+          "id": 4,
+          "name": "Cylinder",
+          "type": "cylinder",
+          "position": {
+            "x": 4.5,
+            "y": 0.5,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "color": 5361510,
+          "opacity": 1,
+          "transparent": false,
+          "materialType": "standard"
+        }
+      ],
+      "selectionId": 3
+    },
+    {
+      "timestamp": 1787861356636,
+      "action": "group_end_select",
+      "objects": [
+        {
+          "id": 1,
+          "name": "Cube",
+          "type": "cube",
+          "position": {
+            "x": -4.078821170294847,
+            "y": 0.5,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "color": 4890367,
+          "opacity": 1,
+          "transparent": false,
+          "materialType": "standard"
+        },
+        {
+          "id": 2,
+          "name": "Sphere",
+          "type": "sphere",
+          "position": {
+            "x": 1.5,
+            "y": 0.5,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "color": 16739179,
+          "opacity": 1,
+          "transparent": false,
+          "materialType": "standard"
+        },
+        {
+          "id": 3,
+          "name": "Sphere (circle)",
+          "type": "sphere",
+          "position": {
+            "x": -7.786161165490348,
+            "y": 0,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "color": 16739179,
+          "opacity": 1,
+          "transparent": false,
+          "materialType": "standard"
+        },
+        {
+          "id": 4,
+          "name": "Cylinder",
+          "type": "cylinder",
+          "position": {
+            "x": -0.03806586031904935,
+            "y": 0.5,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "color": 5361510,
+          "opacity": 1,
+          "transparent": false,
+          "materialType": "standard"
+        }
+      ],
+      "selectionId": 4
+    },
+    {
+      "timestamp": 1787861362568,
+      "action": "stencilApply",
+      "objects": [
+        {
+          "id": 1,
+          "name": "Cube",
+          "type": "cube",
+          "position": {
+            "x": -4.078821170294847,
+            "y": 0.5,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "color": 4890367,
+          "opacity": 1,
+          "transparent": false,
+          "materialType": "standard"
+        },
+        {
+          "id": 2,
+          "name": "Sphere",
+          "type": "sphere",
+          "position": {
+            "x": 1.5,
+            "y": 0.5,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "color": 16739179,
+          "opacity": 1,
+          "transparent": false,
+          "materialType": "standard"
+        },
+        {
+          "id": 3,
+          "name": "Sphere (circle)",
+          "type": "sphere",
+          "position": {
+            "x": -7.786161165490348,
+            "y": 0,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "color": 16739179,
+          "opacity": 1,
+          "transparent": false,
+          "materialType": "standard"
+        },
+        {
+          "id": 4,
+          "name": "Cylinder",
+          "type": "cylinder",
+          "position": {
+            "x": -0.03806586031904935,
+            "y": 0.5,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "color": 5361510,
+          "opacity": 1,
+          "transparent": false,
+          "materialType": "standard"
+        },
+        {
+          "id": 5,
+          "name": "Cylinder (circle)",
+          "type": "cylinder",
+          "position": {
+            "x": -0.03806586031904935,
+            "y": 0,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "color": 5361510,
+          "opacity": 1,
+          "transparent": false,
+          "materialType": "standard"
+        }
+      ],
+      "selectionId": 5
+    },
+    {
+      "timestamp": 1787861366200,
+      "action": "group_end_select",
+      "objects": [
+        {
+          "id": 1,
+          "name": "Cube",
+          "type": "cube",
+          "position": {
+            "x": -4.078821170294847,
+            "y": 0.5,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "color": 4890367,
+          "opacity": 1,
+          "transparent": false,
+          "materialType": "standard"
+        },
+        {
+          "id": 2,
+          "name": "Sphere",
+          "type": "sphere",
+          "position": {
+            "x": 1.5,
+            "y": 0.5,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "color": 16739179,
+          "opacity": 1,
+          "transparent": false,
+          "materialType": "standard"
+        },
+        {
+          "id": 3,
+          "name": "Sphere (circle)",
+          "type": "sphere",
+          "position": {
+            "x": -7.786161165490348,
+            "y": 0,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "color": 16739179,
+          "opacity": 1,
+          "transparent": false,
+          "materialType": "standard"
+        },
+        {
+          "id": 4,
+          "name": "Cylinder",
+          "type": "cylinder",
+          "position": {
+            "x": -0.03806586031904935,
+            "y": 0.5,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "color": 5361510,
+          "opacity": 1,
+          "transparent": false,
+          "materialType": "standard"
+        },
+        {
+          "id": 5,
+          "name": "Cylinder (circle)",
+          "type": "cylinder",
+          "position": {
+            "x": 4.478430947652871,
+            "y": 0.5,
+            "z": 0
+          },
+          "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "color": 5361510,
+          "opacity": 1,
+          "transparent": false,
+          "materialType": "standard"
+        }
+      ],
+      "selectionId": 5
+    }
+  ],
+  "currentIndex": 7
+}

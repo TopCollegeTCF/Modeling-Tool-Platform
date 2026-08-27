@@ -3,14 +3,26 @@ import fastifyStatic from '@fastify/static';
 import { Server } from 'socket.io';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import fs from 'fs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const fastify = Fastify({ logger: false });
+const fastify = Fastify({ 
+    logger: false,
+    // Добавляем это для поддержки DELETE
+    ignoreTrailingSlash: true
+});
+
 const PORT = 8000;
 
-// Регистрируем статические файлы - ИСПРАВЛЕНО
+// Создаем папку projects если её нет
+if (!fs.existsSync('./projects')) {
+    fs.mkdirSync('./projects');
+    console.log('📁 Created projects folder');
+}
+
+// Регистрируем статические файлы
 fastify.register(fastifyStatic, {
     root: join(__dirname),
     prefix: '/',
@@ -41,19 +53,47 @@ fastify.get('/node_modules/*', (request, reply) => {
 // Сохранение проекта
 fastify.post('/api/project/save', async (request, reply) => {
     try {
-        const { projectName, data } = request.body;
-        const filename = `./projects/${projectName || 'untitled'}_${Date.now()}.json`;
+        const { projectName, data, overwrite, currentFilename } = request.body;
         
-        // Создаем папку projects если её нет
-        const fs = await import('fs');
         if (!fs.existsSync('./projects')) {
             fs.mkdirSync('./projects');
         }
         
-        fs.writeFileSync(filename, JSON.stringify(data, null, 2));
+        let filename;
         
-        console.log(`💾 Project saved: ${filename}`);
-        return { success: true, filename };
+        if (overwrite && currentFilename) {
+            const filepath = `./projects/${currentFilename}`;
+            if (fs.existsSync(filepath)) {
+                filename = currentFilename;
+                console.log(`🔄 Overwriting project: ${filename}`);
+            } else {
+                const name = projectName || 'untitled';
+                filename = `${name}_${Date.now()}.json`;
+                console.log(`⚠️ File not found, creating new: ${filename}`);
+            }
+        } else {
+            const name = projectName || 'untitled';
+            const existingFiles = fs.readdirSync('./projects')
+                .filter(f => f.startsWith(name) && f.endsWith('.json'));
+            
+            if (existingFiles.length > 0 && !overwrite) {
+                filename = `${name}_${Date.now()}.json`;
+            } else if (existingFiles.length > 0 && overwrite) {
+                filename = existingFiles[0];
+            } else {
+                filename = `${name}_${Date.now()}.json`;
+            }
+        }
+        
+        const filepath = `./projects/${filename}`;
+        fs.writeFileSync(filepath, JSON.stringify(data, null, 2));
+        
+        console.log(`💾 Project saved: ${filepath}`);
+        return { 
+            success: true, 
+            filename: filename,
+            name: filename.replace('.json', '').replace(/_\d+$/, '')
+        };
     } catch (error) {
         console.error('❌ Error saving project:', error);
         return { success: false, error: error.message };
@@ -64,8 +104,8 @@ fastify.post('/api/project/save', async (request, reply) => {
 fastify.get('/api/project/load/:filename', async (request, reply) => {
     try {
         const { filename } = request.params;
-        const fs = await import('fs');
-        const filepath = `./projects/${filename}`;
+        const decodedFilename = decodeURIComponent(filename);
+        const filepath = `./projects/${decodedFilename}`;
         
         if (!fs.existsSync(filepath)) {
             return reply.status(404).send({ error: 'File not found' });
@@ -79,10 +119,48 @@ fastify.get('/api/project/load/:filename', async (request, reply) => {
     }
 });
 
+// ⭐ УДАЛЕНИЕ ПРОЕКТА - РЕГИСТРИРУЕМ КАК ОТДЕЛЬНЫЙ МАРШРУТ
+fastify.route({
+    method: 'DELETE',
+    url: '/api/project/delete/:filename',
+    handler: async (request, reply) => {
+        try {
+            const { filename } = request.params;
+            const decodedFilename = decodeURIComponent(filename);
+            const filepath = `./projects/${decodedFilename}`;
+            
+            console.log(`🗑️ DELETE request received for: ${decodedFilename}`);
+            console.log(`📁 Full path: ${filepath}`);
+            
+            if (!fs.existsSync(filepath)) {
+                console.log(`❌ File not found: ${filepath}`);
+                const files = fs.existsSync('./projects') ? fs.readdirSync('./projects') : [];
+                console.log(`📁 Available files: ${files.join(', ')}`);
+                
+                return reply.status(404).send({ 
+                    success: false, 
+                    error: `File "${decodedFilename}" not found`,
+                    availableFiles: files
+                });
+            }
+            
+            fs.unlinkSync(filepath);
+            console.log(`✅ Project deleted: ${filepath}`);
+            
+            return reply.send({ success: true, filename: decodedFilename });
+        } catch (error) {
+            console.error('❌ Error deleting project:', error);
+            return reply.status(500).send({ 
+                success: false, 
+                error: error.message 
+            });
+        }
+    }
+});
+
 // Список проектов
 fastify.get('/api/projects', async (_, reply) => {
     try {
-        const fs = await import('fs');
         if (!fs.existsSync('./projects')) {
             return { projects: [] };
         }
@@ -92,7 +170,7 @@ fastify.get('/api/projects', async (_, reply) => {
             .filter(f => f.endsWith('.json'))
             .map(f => ({
                 filename: f,
-                name: f.replace('.json', ''),
+                name: f.replace('.json', '').replace(/_\d+$/, ''),
                 size: fs.statSync(`./projects/${f}`).size,
                 modified: fs.statSync(`./projects/${f}`).mtime
             }));
@@ -119,10 +197,8 @@ io.on('connection', (socket) => {
             users: new Map(),
             objects: []
         });
-        
         socket.join(sessionId);
         socket.sessionId = sessionId;
-        
         socket.emit('sessionCreated', { sessionId });
         io.to(sessionId).emit('sessionUpdate', sessions.get(sessionId));
     });
@@ -140,4 +216,5 @@ fastify.listen({ port: PORT, host: '0.0.0.0' }, (err) => {
     }
     console.log(`🚀 Server running at http://localhost:${PORT}`);
     console.log(`📡 WebSocket server ready`);
+    console.log(`📁 Projects folder: ${join(__dirname, 'projects')}`);
 });

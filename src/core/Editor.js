@@ -387,7 +387,13 @@ export class Editor {
     }
 
     importScene(data) {
+        // Очищаем сцену перед импортом
+        this.clearScene();
+        // Используем новый десериализатор
         this.commandManager.deserialize(data);
+        // Обновляем UI
+        this.uiManager.updateUI();
+        console.log('📂 Scene imported successfully');
     }
 
     // === СЕРИАЛИЗАЦИЯ ОБЪЕКТОВ ===

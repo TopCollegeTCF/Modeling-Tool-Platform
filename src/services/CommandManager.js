@@ -5,8 +5,10 @@
  * - Отслеживает все действия пользователя
  * - Создает полные снимки состояния сцены
  * - Управляет Undo/Redo через HistoryManager
- * - При новом действии удаляет все шаги после текущего индекса (как в Tinkercad)
+ * - При новом действии удаляет все шаги после текущего индекса
+ * - Сохраняет модифицированную геометрию для экспорта/импорта
  *
+ * @version 9.2.0
  */
  export class CommandManager {
     constructor(editor, maxCommands = 100) {
@@ -19,14 +21,12 @@
         this._listeners = [];
         this._pendingPush = null;
         this._pushTimeout = null;
-
         // Группировка для непрерывных действий
         this._isInGroup = false;
         this._groupName = null;
         this._groupStartState = null;
-        this._groupCommands = []; // Список команд в группе
-
-        console.log('📜 CommandManager v9.0 initialized (max: ' + maxCommands + ')');
+        this._groupCommands = [];
+        console.log('📜 CommandManager v9.2 initialized (max: ' + maxCommands + ')');
     }
 
     addListener(callback) {
@@ -58,10 +58,11 @@
     }
 
     /**
-     * Сериализует один объект
+     * Сериализует один объект ПОЛНОСТЬЮ (включая геометрию)
      */
     _serializeEntity(entity) {
         if (!entity) return null;
+
         const data = {
             id: entity.userData.id,
             name: entity.userData.name || entity.userData.type,
@@ -83,21 +84,26 @@
             }
         };
 
+        // Сохраняем материал
         if (entity.material) {
             if (entity.material.color) {
                 data.color = entity.material.color.getHex();
             }
             data.opacity = entity.material.opacity || 1;
             data.transparent = entity.material.transparent || false;
-            // Сохраняем тип материала
             data.materialType = entity.userData.materialType || 'standard';
-            // Сохраняем текстуру
             if (entity.userData.texture) {
                 data.texture = entity.userData.texture;
             }
+            if (entity.material.roughness !== undefined) {
+                data.roughness = entity.material.roughness;
+            }
+            if (entity.material.metalness !== undefined) {
+                data.metalness = entity.material.metalness;
+            }
         }
 
-        // Параметры геометрии
+        // Сохраняем параметры геометрии
         if (entity.type === 'cube') {
             data.width = entity._width !== undefined ? entity._width : entity.geometry.parameters?.width || 1;
             data.height = entity._height !== undefined ? entity._height : entity.geometry.parameters?.height || 1;
@@ -114,6 +120,34 @@
             data.radialSegments = entity._radialSegments !== undefined ? entity._radialSegments : entity.geometry.parameters?.radialSegments || 32;
             data.heightSegments = entity._heightSegments !== undefined ? entity._heightSegments : entity.geometry.parameters?.heightSegments || 1;
             data.openEnded = entity._openEnded !== undefined ? entity._openEnded : entity.geometry.parameters?.openEnded || false;
+        }
+
+        // Сохраняем ВСЕ вершины геометрии для любого модифицированного объекта
+        const geometry = entity.geometry;
+        if (geometry && geometry.attributes && geometry.attributes.position) {
+            const position = geometry.attributes.position;
+            const positions = position.array.slice();
+            
+            const isModified = entity.userData.stencilApplied || 
+                              entity.userData.geometryModified ||
+                              (entity.type === 'cylinder' && entity.userData.stencilApplied !== undefined);
+            
+            if (isModified) {
+                data.modifiedGeometry = {
+                    positions: Array.from(positions),
+                    vertexCount: positions.length / 3,
+                    stencilShape: entity.userData.stencilShape || null,
+                    stencilSize: entity.userData.stencilSize || null,
+                };
+                console.log(`💾 Saved modified geometry for ${entity.userData.name} (${positions.length / 3} vertices)`);
+            }
+        }
+
+        // Сохраняем флаг применения трафарета
+        if (entity.userData.stencilApplied) {
+            data.stencilApplied = true;
+            data.stencilShape = entity.userData.stencilShape;
+            data.stencilSize = entity.userData.stencilSize;
         }
 
         return data;
@@ -209,10 +243,15 @@
                 entity.material.opacity = data.opacity;
                 entity.material.needsUpdate = true;
             }
-            // Восстанавливаем тип материала
+            if (data.roughness !== undefined) {
+                entity.material.roughness = data.roughness;
+            }
+            if (data.metalness !== undefined) {
+                entity.material.metalness = data.metalness;
+            }
+
             if (data.materialType) {
                 entity.userData.materialType = data.materialType;
-                // Применяем материал через MaterialManager для полного восстановления
                 const materialManager = this.editor.materialManager;
                 if (materialManager && data.materialType) {
                     const texture = data.texture || null;
@@ -222,8 +261,8 @@
                     
                     const newMaterial = materialManager.createMaterial(data.materialType, {
                         color: color,
-                        roughness: entity.material.roughness || 0.3,
-                        metalness: entity.material.metalness || 0.1,
+                        roughness: data.roughness || entity.material.roughness || 0.3,
+                        metalness: data.metalness || entity.material.metalness || 0.1,
                         transparent: transparent,
                         opacity: opacity,
                         texture: texture,
@@ -240,7 +279,6 @@
                     }
                 }
             } else if (data.texture) {
-                // Если есть текстура, но нет типа материала - применяем стандартный
                 const materialManager = this.editor.materialManager;
                 if (materialManager) {
                     const color = data.color || entity.material.color.getHex();
@@ -248,8 +286,8 @@
                     const transparent = data.transparent !== undefined ? data.transparent : opacity < 1;
                     const newMaterial = materialManager.createMaterial(MATERIAL_TYPES.STANDARD, {
                         color: color,
-                        roughness: entity.material.roughness || 0.3,
-                        metalness: entity.material.metalness || 0.1,
+                        roughness: data.roughness || entity.material.roughness || 0.3,
+                        metalness: data.metalness || entity.material.metalness || 0.1,
                         transparent: transparent,
                         opacity: opacity,
                         texture: data.texture,
@@ -263,6 +301,35 @@
                     entity.userData.texture = data.texture;
                     entity.userData.materialType = MATERIAL_TYPES.STANDARD;
                 }
+            }
+        }
+
+        // Восстановление модифицированной геометрии
+        if (data.modifiedGeometry) {
+            const geometry = entity.geometry;
+            if (geometry && geometry.attributes && geometry.attributes.position) {
+                const positions = data.modifiedGeometry.positions;
+                if (positions && positions.length > 0) {
+                    const positionAttr = geometry.attributes.position;
+                    positionAttr.array = new Float32Array(positions);
+                    positionAttr.needsUpdate = true;
+                    geometry.computeVertexNormals();
+                    
+                    if (data.stencilApplied) {
+                        entity.userData.stencilApplied = true;
+                        entity.userData.stencilShape = data.stencilShape;
+                        entity.userData.stencilSize = data.stencilSize;
+                    }
+                    if (data.stencilApplied || data.stencilShape) {
+                        entity.userData.geometryModified = true;
+                    }
+                    console.log(`🔧 Restored modified geometry for ${entity.userData.name}`);
+                }
+            }
+        } else {
+            if (entity.userData.stencilApplied) {
+                entity.userData.stencilApplied = false;
+                entity.userData.geometryModified = false;
             }
         }
 
@@ -326,6 +393,8 @@
                     segments: data.segments || 1,
                     transparent: data.transparent || false,
                     opacity: data.opacity || 1,
+                    roughness: data.roughness || 0.3,
+                    metalness: data.metalness || 0.1,
                 });
                 break;
             case 'sphere':
@@ -337,6 +406,8 @@
                     heightSegments: data.heightSegments || 32,
                     transparent: data.transparent || false,
                     opacity: data.opacity || 1,
+                    roughness: data.roughness || 0.3,
+                    metalness: data.metalness || 0.1,
                 });
                 break;
             case 'cylinder':
@@ -351,6 +422,8 @@
                     openEnded: data.openEnded || false,
                     transparent: data.transparent || false,
                     opacity: data.opacity || 1,
+                    roughness: data.roughness || 0.3,
+                    metalness: data.metalness || 0.1,
                 });
                 break;
             default:
@@ -360,6 +433,16 @@
 
         if (entity && data.id) {
             entity.userData.id = data.id;
+        }
+
+        if (entity && data.position) {
+            entity.position.set(data.position.x, data.position.y, data.position.z);
+        }
+        if (entity && data.rotation) {
+            entity.rotation.set(data.rotation.x, data.rotation.y, data.rotation.z);
+        }
+        if (entity && data.scale) {
+            entity.scale.set(data.scale.x, data.scale.y, data.scale.z);
         }
 
         // Восстанавливаем материал
@@ -372,8 +455,8 @@
             
             const newMaterial = materialManager.createMaterial(data.materialType, {
                 color: color,
-                roughness: entity.material.roughness || 0.3,
-                metalness: entity.material.metalness || 0.1,
+                roughness: data.roughness || entity.material.roughness || 0.3,
+                metalness: data.metalness || entity.material.metalness || 0.1,
                 transparent: transparent,
                 opacity: opacity,
                 texture: texture,
@@ -390,15 +473,14 @@
                 entity.userData.texture = data.texture;
             }
         } else if (entity && data.texture && this.editor.materialManager) {
-            // Если есть текстура, но нет типа материала
             const materialManager = this.editor.materialManager;
             const color = data.color || entity.material.color.getHex();
             const opacity = data.opacity || entity.material.opacity || 1;
             const transparent = data.transparent !== undefined ? data.transparent : opacity < 1;
             const newMaterial = materialManager.createMaterial(MATERIAL_TYPES.STANDARD, {
                 color: color,
-                roughness: entity.material.roughness || 0.3,
-                metalness: entity.material.metalness || 0.1,
+                roughness: data.roughness || entity.material.roughness || 0.3,
+                metalness: data.metalness || entity.material.metalness || 0.1,
                 transparent: transparent,
                 opacity: opacity,
                 texture: data.texture,
@@ -411,6 +493,28 @@
             }
             entity.userData.texture = data.texture;
             entity.userData.materialType = MATERIAL_TYPES.STANDARD;
+        }
+
+        // Восстановление модифицированной геометрии для нового объекта
+        if (entity && data.modifiedGeometry) {
+            const geometry = entity.geometry;
+            if (geometry && geometry.attributes && geometry.attributes.position) {
+                const positions = data.modifiedGeometry.positions;
+                if (positions && positions.length > 0) {
+                    const positionAttr = geometry.attributes.position;
+                    positionAttr.array = new Float32Array(positions);
+                    positionAttr.needsUpdate = true;
+                    geometry.computeVertexNormals();
+                    
+                    if (data.stencilApplied) {
+                        entity.userData.stencilApplied = true;
+                        entity.userData.stencilShape = data.stencilShape;
+                        entity.userData.stencilSize = data.stencilSize;
+                    }
+                    entity.userData.geometryModified = true;
+                    console.log(`🔧 Restored modified geometry for ${entity.userData.name}`);
+                }
+            }
         }
 
         return entity;
@@ -454,9 +558,7 @@
             return;
         }
 
-        // Сохраняем группу как одно действие с именем группы
         this._pushState(endState, this._groupName);
-        
         this._isInGroup = false;
         this._groupName = null;
         this._groupStartState = null;
@@ -464,13 +566,9 @@
         console.log(`📦 Group ended: ${this._groupName}`);
     }
 
-    /**
-     * Сравнивает два состояния
-     */
     _statesEqual(state1, state2) {
         if (!state1 || !state2) return false;
         if (state1.objects.length !== state2.objects.length) return false;
-
         for (let i = 0; i < state1.objects.length; i++) {
             const obj1 = state1.objects[i];
             const obj2 = state2.objects[i];
@@ -479,9 +577,6 @@
         return true;
     }
 
-    /**
-     * Сравнивает два объекта
-     */
     _objectsEqual(obj1, obj2) {
         if (!obj1 || !obj2) return false;
         if (obj1.id !== obj2.id) return false;
@@ -502,12 +597,21 @@
         if (obj1.materialType !== undefined && obj2.materialType !== undefined && obj1.materialType !== obj2.materialType) return false;
         if (obj1.texture !== undefined && obj2.texture !== undefined && obj1.texture !== obj2.texture) return false;
 
+        if (obj1.modifiedGeometry !== undefined && obj2.modifiedGeometry !== undefined) {
+            const pos1 = obj1.modifiedGeometry.positions;
+            const pos2 = obj2.modifiedGeometry.positions;
+            if (pos1 && pos2 && pos1.length === pos2.length) {
+                for (let i = 0; i < pos1.length; i++) {
+                    if (Math.abs(pos1[i] - pos2[i]) > eps) return false;
+                }
+            }
+        }
+
         return true;
     }
 
     /**
      * Сохраняет состояние в историю
-     * ПРИ НОВОМ ДЕЙСТВИИ УДАЛЯЕТ ВСЕ ШАГИ ПОСЛЕ ТЕКУЩЕГО ИНДЕКСА
      */
     _pushState(state, actionName = 'unknown') {
         if (this.isRestoring) {
@@ -523,19 +627,15 @@
             return;
         }
 
-        // ⭐ КЛЮЧЕВОЕ ИЗМЕНЕНИЕ: Удаляем все шаги после текущего индекса
-        // Это поведение как в Tinkercad - новое действие перезаписывает будущее
         const stepsToRemove = this.history.length - this.currentIndex - 1;
         if (stepsToRemove > 0) {
             this.history.splice(this.currentIndex + 1, stepsToRemove);
             console.log(`🗑️ Removed ${stepsToRemove} future steps (history truncated)`);
         }
 
-        // Добавляем новое состояние
         this.history.push(state);
         this.currentIndex = this.history.length - 1;
 
-        // Ограничиваем размер истории
         if (this.history.length > this.maxCommands) {
             const removeCount = this.history.length - this.maxCommands;
             this.history.splice(0, removeCount);
@@ -546,9 +646,6 @@
         this.notifyListeners();
     }
 
-    /**
-     * Записывает действие в историю с принудительным сохранением
-     */
     push(actionName = 'unknown', force = false) {
         if (this.isRestoring) return;
 
@@ -558,14 +655,12 @@
             return;
         }
 
-        // Если force=true, записываем сразу
         if (force) {
             const state = this.captureState(actionName);
             this._pushState(state, actionName);
             return;
         }
 
-        // Иначе с небольшой задержкой (чтобы захватить все изменения)
         if (this._pushTimeout) {
             clearTimeout(this._pushTimeout);
         }
@@ -581,9 +676,6 @@
         }, 50);
     }
 
-    /**
-     * Принудительно сохраняет текущее состояние (для сохранения проекта)
-     */
     flush() {
         if (this._pushTimeout) {
             clearTimeout(this._pushTimeout);
@@ -594,19 +686,13 @@
             this._pushState(state, this._pendingPush);
             this._pendingPush = null;
         }
-
-        // Также завершаем группу, если она активна
         if (this._isInGroup) {
             this.endGroup();
         }
     }
 
-    /**
-     * Откат на один шаг назад (Undo)
-     */
     undo() {
-        this.flush(); // Принудительно сохраняем перед откатом
-
+        this.flush();
         if (this.isExecuting) return false;
         if (this._isInGroup) {
             console.warn('⚠️ Cannot undo while in group');
@@ -633,12 +719,8 @@
         }
     }
 
-    /**
-     * Повтор команды (Redo)
-     */
     redo() {
-        this.flush(); // Принудительно сохраняем перед повтором
-
+        this.flush();
         if (this.isExecuting) return false;
         if (this._isInGroup) {
             console.warn('⚠️ Cannot redo while in group');
@@ -707,29 +789,48 @@
         this.notifyListeners();
     }
 
+    /**
+     * Сериализует ВСЮ историю для сохранения проекта
+     */
     serialize() {
-        this.flush(); // Принудительно сохраняем перед сериализацией
+        this.flush();
         return {
-            version: '9.0',
+            version: '9.2',
             timestamp: Date.now(),
             history: this.history,
-            currentIndex: this.currentIndex
+            currentIndex: this.currentIndex,
+            objectCount: this.history[this.currentIndex]?.objects?.length || 0
         };
     }
 
+    /**
+     * Десериализует проект из сохраненного состояния
+     */
     deserialize(data) {
-        if (!data || !data.history) return;
+        if (!data) return;
+        
         this.isRestoring = true;
         try {
-            this.history = data.history;
-            this.currentIndex = data.currentIndex !== undefined ? data.currentIndex : this.history.length - 1;
-            if (this.currentIndex >= 0 && this.currentIndex < this.history.length) {
-                this.restoreState(this.history[this.currentIndex]);
+            if (data.history && data.history.length > 0) {
+                this.history = data.history;
+                this.currentIndex = data.currentIndex !== undefined ? data.currentIndex : this.history.length - 1;
+                if (this.currentIndex >= 0 && this.currentIndex < this.history.length) {
+                    this.restoreState(this.history[this.currentIndex]);
+                }
+                console.log(`📂 Project restored with ${this.history.length} history steps, index: ${this.currentIndex}`);
+            } else if (data.state) {
+                this.history = [data.state];
+                this.currentIndex = 0;
+                this.restoreState(data.state);
+                console.log(`📂 Project restored from single state (legacy format)`);
+            } else {
+                console.warn('⚠️ No valid history found in project data');
+                this.saveInitialState();
             }
-            console.log(`📂 History restored: ${this.history.length} steps`);
             this.notifyListeners();
         } catch (error) {
-            console.error('❌ Error deserializing history:', error);
+            console.error('❌ Error deserializing project:', error);
+            this.saveInitialState();
         } finally {
             this.isRestoring = false;
         }

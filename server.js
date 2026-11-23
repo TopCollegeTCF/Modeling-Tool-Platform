@@ -14,7 +14,7 @@ const fastify = Fastify({
     ignoreTrailingSlash: true
 });
 
-process.env.PORT || 8000;
+const PORT = process.env.PORT || 8000;
 
 // Создаем папку projects если её нет
 if (!fs.existsSync('./projects')) {
